@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -19 303 303">
+  <!-- Símbolo floco de neve: vetorização fiel (vértices medidos) do favicon publicado em engefril.com.br
+       (wp-content/uploads/2021/06/engefril_-_logo-favicon.png). Marca de propriedade da Engefril. -->
+  <g fill="#9c9aa0">
+    <polygon points="74,5 129,37 129,100 74,69"/>
+    <polygon points="165,36 220,5 220,68 165,100"/>
+    <polygon points="3,130 57,100 109,130 56,161"/>
+    <polygon points="185,130 239,100 290,131 238,161"/>
+    <polygon points="74,192 129,160 129,227 74,259"/>
+  </g>
+  <polygon fill="#0069ae" points="165,160 220,192 220,259 165,227"/>
+</svg>
