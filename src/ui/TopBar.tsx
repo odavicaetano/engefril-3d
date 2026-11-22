@@ -28,6 +28,7 @@ export default function TopBar() {
         <button className="ib hide-m" data-tip="Refazer (Ctrl+Y)" aria-label="Refazer" disabled={!s.future.length} onClick={s.redo}><I.redo /></button>
         <button className="ib hide-m" data-tip="Salvar no navegador" aria-label="Salvar projeto" onClick={() => { saveProject(s.project); s.showToast(`“${s.project.name}” salvo neste navegador.`); }}><I.save /></button>
         <button className="ib hide-m" data-tip="Projetos, importar e exportar" aria-label="Projetos" onClick={() => s.setModal('projetos')}><I.upload /></button>
+        <button className="ib hide-m" data-tip="Importar desenho CAD (DWG, BAK, DXF)" aria-label="Importar desenho CAD" onClick={() => s.setModal('importarCad')}><I.importCad /></button>
         <button className="ib hide-m" data-tip="Copiar link do cenário" aria-label="Compartilhar" onClick={share}><I.link /></button>
         <button className="ib" data-tip="Exportar Projeto em PDF" aria-label="Exportar Projeto em PDF" onClick={() => s.setModal('exportar')}><I.report /></button>
         <button className="ib" data-tip="Segurança com amônia" aria-label="Segurança" onClick={() => s.setModal('seguranca')}><I.shield /></button>

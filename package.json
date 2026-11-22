@@ -13,8 +13,11 @@
     "gen:icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
+    "@mlightcad/libredwg-web": "^0.9.3",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
+    "dxf-parser": "^1.1.2",
+    "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -31,5 +34,6 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }

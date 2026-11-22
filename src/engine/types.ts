@@ -40,5 +40,24 @@ export interface Project {
   process: { flow: number; Tin: number; Tout: number; hoursPerDay: number; strategy: 'chiller' | 'banco-gelo' };
   finance: { tariff: number; operatingDays: number; investment: number | null; investmentSource: string; maintenance: number | null };
   confirmed: Partial<Record<ConfirmKey, boolean>>;
+  /** Origem da geometria quando importada de arquivo CAD (DWG/BAK/DXF). */
+  cadImport?: CadImportRecord;
+}
+
+export interface CadImportRecord {
+  fileName: string;
+  format: 'dwg' | 'dxf' | 'bak';
+  version: string; // ex.: AC1032 (AutoCAD 2018)
+  unit: string; // unidade adotada para o desenho (mm, cm, m, in, ft)
+  scale: number; // fator do desenho para metros
+  rotationDeg: number;
+  importedAt: string;
+  layers: string[]; // camadas importadas
+  mapping: Record<string, string>; // camada -> categoria
+  /** Linhas de referência 2D (metros, coordenadas da câmara: x ao longo do comprimento, z da frente para o fundo), [x1, z1, x2, z2, ...] */
+  ref: number[];
+  /** Origem de cada parâmetro preenchido pela importação. */
+  provenance: Record<string, string>;
+  warnings: string[];
 }
 export type ConfirmKey = 'dimensoes' | 'temperaturas' | 'portas' | 'produto' | 'isolamento' | 'internas' | 'clima' | 'operacao';

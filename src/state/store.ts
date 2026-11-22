@@ -5,12 +5,12 @@ import { DEMOS } from '../data/scenarios';
 
 export type Mode = 'home' | 'comercial' | 'aprendizado' | 'tecnico';
 export type CutMode = 'nenhum' | 'longitudinal' | 'transversal' | 'horizontal' | 'parcial';
-export type Modal = null | 'sobre' | 'fontes' | 'controles' | 'glossario' | 'seguranca' | 'projetos' | 'molecular' | 'biblioteca' | 'exportar';
+export type Modal = null | 'sobre' | 'fontes' | 'controles' | 'glossario' | 'seguranca' | 'projetos' | 'molecular' | 'biblioteca' | 'exportar' | 'importarCad';
 
 export interface ViewState {
   cut: CutMode; cutPos: number; opacity: number; explode: number; technical: boolean; hideBuilding: boolean;
   isolate: boolean; selected: string | null; anim: 'normal' | 'reduzida' | 'pausada'; flowSpeed: number;
-  quality: 'alta' | 'media' | 'baixa'; split: boolean; syncCameras: boolean; showFlow: boolean; showHeat: boolean; showLabels: boolean; doorsOpen: boolean;
+  quality: 'alta' | 'media' | 'baixa'; split: boolean; syncCameras: boolean; showCadRef: boolean; showFlow: boolean; showHeat: boolean; showLabels: boolean; doorsOpen: boolean;
 }
 export interface TechParams { Te: number; Tc: number; superheat: number; subcool: number; etaIs: number; etaMotor: number; architecture: Architecture; capacity: number; pUnit: 'kPa' | 'bar'; tUnit: 'C' | 'K'; fromProject: boolean }
 
@@ -33,7 +33,7 @@ interface Store {
 
 export const DEFAULT_VIEW: ViewState = {
   cut: 'nenhum', cutPos: 0, opacity: 1, explode: 0, technical: false, hideBuilding: false, isolate: false, selected: null,
-  anim: 'normal', flowSpeed: 1, quality: 'alta', split: false, syncCameras: true, showFlow: true, showHeat: true, showLabels: true, doorsOpen: false,
+  anim: 'normal', flowSpeed: 1, quality: 'alta', split: false, syncCameras: true, showCadRef: true, showFlow: true, showHeat: true, showLabels: true, doorsOpen: false,
 };
 
 function initialProject(): Project {

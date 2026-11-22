@@ -40,6 +40,7 @@ export default function Toolbar() {
         <button className={`ib ${v.isolate ? 'on' : ''}`} data-tip={v.selected ? 'Isolar equipamento selecionado' : 'Selecione um equipamento para isolar'} aria-label="Isolar" disabled={!v.selected} onClick={() => s.setView({ isolate: !v.isolate })}><I.isolate /></button>
         <span className="tool-sep" />
         <button className={`ib ${v.doorsOpen ? 'on' : ''}`} data-tip={v.doorsOpen ? 'Fechar portas' : 'Abrir portas'} aria-label="Abrir ou fechar portas" onClick={() => s.setView({ doorsOpen: !v.doorsOpen })}><I.door /></button>
+        {s.project.cadImport && <button className={`ib ${v.showCadRef ? 'on' : ''}`} data-tip={v.showCadRef ? 'Ocultar referência CAD' : 'Mostrar referência CAD'} aria-label="Referência CAD" onClick={() => s.setView({ showCadRef: !v.showCadRef })}><I.plan /></button>}
         <button className={`ib ${v.showFlow ? 'on' : ''}`} data-tip="Fluxo de refrigerante" aria-label="Mostrar fluxo" onClick={() => s.setView({ showFlow: !v.showFlow })}><I.flow /></button>
         <button className={`ib ${v.showHeat ? 'on' : ''}`} data-tip="Calor e fluxo de ar" aria-label="Mostrar calor" onClick={() => s.setView({ showHeat: !v.showHeat })}><I.heat /></button>
         <button className="ib" data-tip={v.anim === 'pausada' ? 'Retomar animações' : 'Pausar animações'} aria-label="Pausar animações" onClick={() => s.setView({ anim: v.anim === 'pausada' ? 'normal' : 'pausada' })}>{v.anim === 'pausada' ? <I.play /> : <I.pause />}</button>

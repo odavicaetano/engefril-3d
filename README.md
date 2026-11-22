@@ -8,10 +8,11 @@ Protótipo demonstrativo de visualização 3D, ensino e pré-dimensionamento de 
 ```powershell
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 28 testes do motor de cálculo
+npm test           # 77 testes: motor, relatórios PDF, planilhas e importação CAD
 npm run build      # build de produção (PWA) em dist/
 npm run gen:r717   # regenera as tabelas de propriedades da amônia com o CoolProp
 npm run gen:icons  # regenera favicon.ico e os PNG a partir de public/favicon.svg
+node scripts/gen-cad-fixtures.mjs   # regenera os DXF de teste da importação CAD
 ```
 
 ## 1. Síntese da pesquisa
@@ -46,7 +47,7 @@ Páginas lidas: home, A Engefril, Soluções, Portfólio, Produtos, Evaporadores
 - **Qualidade dos dados:** exploratório, preliminar ou detalhado, conforme as etapas confirmadas, com margem de ±20, ±10 ou ±5%. A faixa combina variantes baixa e alta das incertezas da literatura. Há sensibilidade (tornado) para 7 parâmetros.
 - **Arquitetura:** `engine/` (cálculo) · `data/` (catálogo, fontes, cenários) · `state/` (zustand, desfazer/refazer, persistência) · `scene/` (R3F: layout puro, materiais com corte, equipamentos, edificações) · `modes/` (comercial, aprendizado, técnico) · `report/` (PDF) · `ui/`.
 
-## 3. Exportação de projetos em PDF (A4)
+## 3. Exportação de projetos (PDF A4 e planilhas) e importação CAD
 
 Botão **Exportar Projeto em PDF** (barra superior e etapa 10 do modo comercial), com pré-visualização e escolha entre:
 - **Relatório Técnico Completo** (`src/report/technical.ts`): capa técnica (código, revisão, data, instalação), sumário, memorial descritivo, memorial de cálculo com fórmulas e valores do motor, desenhos vetoriais cotados gerados das dimensões do simulador (planta baixa geral, detalhe da sala de máquinas, cortes A-A e B-B, vista frontal e diagrama do circuito com estados termodinâmicos), especificação de equipamentos com TAGs, quadro de dimensionamento, análise energética com comparação de arquiteturas e de cenários A×B, conclusões e dados para o projeto executivo.
@@ -54,7 +55,19 @@ Botão **Exportar Projeto em PDF** (barra superior e etapa 10 do modo comercial)
 
 Orientação automática (texto em retrato, desenhos em paisagem), retrato ou paisagem, sempre em A4. As folhas de desenho seguem convenções usuais (margens e legenda da ABNT NBR 10068, cotas da NBR 10126, escalas da NBR 8196, linhas da NBR 8403), citadas como referência, sem validação normativa formal. O documento declara que é um pré-dimensionamento orientativo: não traz assinatura, ART nem validação profissional. Os testes (`src/report/report.test.ts`) geram o documento para 15 configurações (1 a 8 evaporadores, 1 a 5 câmaras, 0 a 7 portas em 4 paredes, 5 arquiteturas e água gelada) e conferem páginas A4, seções, TAGs e números iguais aos do motor.
 
-Backup da versão anterior: tag git `v0.1.0`.
+Backups das versões anteriores: tags git `v0.1.0` e `v0.2.0`.
+
+### Padrão de exportação (PDF A4 e planilhas)
+- Tokens de identidade compartilhados em [`src/design/design-tokens.json`](src/design/design-tokens.json), com status por cor (medido, provisório ou derivado; tudo "a validar"). O site, os PDFs e as planilhas usam os mesmos tokens.
+- Kit de componentes PDF ([`src/report/kit.ts`](src/report/kit.ts)): PDFHeader, PDFFooter, Cover, SectionTitle, TechnicalTable, Disclaimer e as primitivas de desenho técnico. Inclui sumário com links, marcadores (bookmarks), metadados e idioma pt-BR. O relatório técnico tem seções selecionáveis e numeração automática; o relatório comercial usa o mesmo kit.
+- Planilha XLSX (abas Sobre, Resumo, Entradas, Cálculos, Equipamentos, Cenários, Fontes e Premissas), com fórmulas auditáveis, entradas editáveis identificadas por estilo e por texto, cabeçalhos congelados, filtros e validações. Há também exportação em CSV. Um teste recalcula as fórmulas e confere que planilha e PDF coincidem.
+- Nome padronizado: `ENGEFRIL3D_<projeto>_<tipo>_<revisão>_<AAAAMMDD>.<ext>`. Guia de replicação: [docs/GUIA_EXPORTACAO.md](docs/GUIA_EXPORTACAO.md).
+
+### Importação de desenhos CAD (DWG, BAK, DXF)
+Assistente em 6 etapas (Arquivo → Leitura → Unidades → Mapeamento → Prévia 3D → Confirmar), acessível pelo modal Projetos, pela barra superior e pela etapa Dimensões. O DWG é lido localmente pelo GNU LibreDWG (WebAssembly, GPL-3.0) e o DXF pelo dxf-parser. A leitura roda num Web Worker com limites e tempo máximo. O assistente reconhece a câmara retangular, a espessura do painel, as portas e indícios de equipamentos, sempre com grau de confiança e confirmação do usuário. Antes de aplicar há comparação antes/depois, prévia isométrica e opção de abrir o resultado como cenário B; a aplicação é desfazível, e a referência 2D aparece no piso da cena 3D. Detalhes, limites e decisões: [docs/IMPORTACAO_CAD.md](docs/IMPORTACAO_CAD.md).
+
+### Licença
+Por incluir o GNU LibreDWG, o código é distribuído sob a **GPL-3.0-or-later** ([LICENSE](LICENSE), [THIRD_PARTY.md](THIRD_PARTY.md)). O símbolo da Engefril não é coberto pela licença do código.
 
 ## 4. Estado de implementação
 

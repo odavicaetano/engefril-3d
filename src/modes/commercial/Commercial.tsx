@@ -109,7 +109,8 @@ function StepDims() {
   return (
     <div>
       <div className="card">
-        <h3>Geometria da câmara</h3>
+        <h3>Geometria da câmara<span className="spacer" /><button className="btn sm" onClick={() => useStore.getState().setModal('importarCad')}><I.importCad /> Importar de DWG/DXF</button></h3>
+        {p.cadImport && <p className="small muted" style={{ marginTop: 0 }}>Geometria importada de <b>{p.cadImport.fileName}</b> ({p.cadImport.format.toUpperCase()}, {p.cadImport.unit}). Campos importados: {Object.keys(p.cadImport.provenance).join(', ')}.</p>}
         <div className="seg" style={{ marginBottom: 10 }}>
           <button className={p.room.areaMode === 'dims' ? 'on' : ''} onClick={() => up((q) => { q.room.areaMode = 'dims'; q.room.length = g.L; q.room.width = g.W; })}>Comprimento × largura</button>
           <button className={p.room.areaMode === 'area' ? 'on' : ''} onClick={() => up((q) => { q.room.areaMode = 'area'; q.room.area = Math.round(g.floor); q.room.aspect = Math.round((g.L / g.W) * 10) / 10; })}>Área + proporção</button>

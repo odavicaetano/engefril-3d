@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "name": "ENGEFRIL 3D: tokens de identidade compartilhados (sites, PDFs e planilhas)",
+    "version": "1.0.0",
+    "updated": "2026-11-22",
+    "status": "a validar",
+    "note": "Não são padrões oficiais da Engefril. As cores marcadas como 'medido' foram extraídas em pixels do favicon e do logotipo publicados em engefril.com.br; as marcadas como 'provisório' vêm do documento mestre interno e precisam ser confirmadas com o manual de marca."
+  },
+  "color": {
+    "brand-primary": { "value": "#0069AE", "status": "medido", "source": "favicon oficial (wp-content/uploads/2021/06/engefril_-_logo-favicon.png), parte azul do símbolo", "use": "títulos, faixas, destaques e navegação" },
+    "brand-grey": { "value": "#9C9AA0", "status": "medido", "source": "favicon oficial, parte cinza do símbolo", "use": "símbolo e elementos secundários" },
+    "brand-graphite-logo": { "value": "#484848", "status": "medido", "source": "logotipo LogoEngefril_57-anos (tipografia)", "use": "referência do logotipo" },
+    "ui-dark": { "value": "#10334F", "status": "provisório", "source": "documento mestre Engefril 3D", "use": "cabeçalhos técnicos e fundos escuros" },
+    "ui-graphite": { "value": "#36424B", "status": "provisório", "source": "documento mestre Engefril 3D", "use": "texto e desenhos" },
+    "ui-light": { "value": "#EDF1F4", "status": "provisório", "source": "documento mestre Engefril 3D", "use": "fundos alternados e tabelas" },
+    "ui-white": { "value": "#FFFFFF", "status": "provisório", "source": "documento mestre Engefril 3D", "use": "papel, espaços e marca negativa" },
+    "ui-accent": { "value": "#247BA7", "status": "provisório", "source": "documento mestre Engefril 3D", "use": "links, realces e dados" },
+    "ui-muted": { "value": "#5D6B79", "status": "derivado", "source": "interface ENGEFRIL 3D", "use": "textos secundários e cotas" },
+    "ui-line": { "value": "#CDD5DD", "status": "derivado", "source": "interface ENGEFRIL 3D", "use": "linhas de tabela e divisórias" },
+    "ui-input": { "value": "#FFF6D6", "status": "derivado", "source": "padrão de planilhas", "use": "células de entrada editáveis" },
+    "state-warning": { "value": "#C27C00", "status": "derivado", "source": "interface ENGEFRIL 3D", "use": "avisos" },
+    "state-error": { "value": "#C0392B", "status": "derivado", "source": "interface ENGEFRIL 3D", "use": "erros" },
+    "state-ok": { "value": "#1F9D55", "status": "derivado", "source": "interface ENGEFRIL 3D", "use": "confirmações e itens reconhecidos" }
+  },
+  "decisions": [
+    "O documento mestre propõe #145078 como 'azul principal' provisório. Como o próprio documento prioriza cores extraídas do site, adota-se o azul medido no favicon oficial (#0069AE); #145078 fica registrado como alternativa não adotada.",
+    "A versão negativa oficial do símbolo não está disponível publicamente: sobre fundos escuros usa-se o símbolo original colorido (sem inverter cores), até que a arte oficial branca seja fornecida."
+  ],
+  "typography": {
+    "web": "Aptos, 'Segoe UI', Arial, Helvetica, sans-serif",
+    "pdf": "helvetica",
+    "spreadsheet": "Arial",
+    "weights": { "title": "semibold/bold", "body": "regular" },
+    "note": "Famílias de ampla compatibilidade. Substituir pela fonte licenciada da marca quando houver; nenhum arquivo de fonte é incorporado."
+  },
+  "logo": {
+    "symbol": "public/favicon.svg (vetorização fiel do favicon publicado; marca de propriedade da Engefril)",
+    "rules": [
+      "Versão positiva: símbolo colorido original sobre fundo branco ou claro, com área de proteção de 1/4 da altura do símbolo.",
+      "Versão negativa: usar somente a arte oficial branca quando fornecida; não inverter cores por filtro.",
+      "Nunca redesenhar, esticar, recolorir ou recortar o símbolo.",
+      "Uma ocorrência por página (capa, cabeçalho ou legenda); não repetir em células ou gráficos."
+    ]
+  },
+  "document": {
+    "pageFormat": "A4",
+    "orientation": { "default": "retrato", "drawings": "paisagem", "wideTables": "paisagem" },
+    "marginsMm": { "text": { "top": 24, "right": 15, "bottom": 18, "left": 20 }, "drawing": { "top": 7, "right": 7, "bottom": 7, "left": 25 } },
+    "classification": "Estudo preliminar / pré-dimensionamento orientativo",
+    "fileName": "ENGEFRIL3D_<projeto>_<tipo>_<revisão>_<AAAAMMDD>.<ext>"
+  }
+}

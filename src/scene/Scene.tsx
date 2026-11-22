@@ -62,8 +62,21 @@ function Installation({ l, p }: { l: Layout; p: Project }) {
       {!view.isolate && l.routes.map((r) => <Pipe key={r.id} route={r} />)}
       {!view.isolate && view.showFlow && l.routes.map((r) => <Flow key={'f' + r.id} route={r} rate={rate} />)}
       <SelectionBox l={l} />
+      {view.showCadRef && p.cadImport && p.cadImport.ref.length > 0 && p.application !== 'agua-gelada' && <CadReference refSegs={p.cadImport.ref} />}
     </group>
   );
+}
+
+/** Linhas de referência 2D do desenho CAD importado, no plano do piso (coordenadas da câmara). */
+function CadReference({ refSegs }: { refSegs: number[] }) {
+  const geo = useMemo(() => {
+    const pos = new Float32Array((refSegs.length / 4) * 6);
+    for (let i = 0, j = 0; i + 3 < refSegs.length; i += 4, j += 6) { pos[j] = refSegs[i]; pos[j + 1] = 0.04; pos[j + 2] = refSegs[i + 1]; pos[j + 3] = refSegs[i + 2]; pos[j + 4] = 0.04; pos[j + 5] = refSegs[i + 3]; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, [refSegs]);
+  return <lineSegments geometry={geo} renderOrder={2}><lineBasicMaterial color="#C27C00" transparent opacity={0.9} depthTest={false} /></lineSegments>;
 }
 
 function SelectionBox({ l }: { l: Layout }) {

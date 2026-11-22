@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTechnicalReport, equipmentTags } from './technical';
+import { buildCommercialReport } from './pdf';
 import { chooseScale } from './common';
 import { DEMOS, makeDoor, projectFor } from '../data/scenarios';
 import { evaluate } from '../engine/analysis';
@@ -93,6 +94,30 @@ describe('Relatório técnico A4', () => {
       expect(sum).toBeCloseTo(r.items.find((i) => i.key === 'transmissao')!.kWhDay, 6);
       const inf = m.doors.reduce((a, x) => a + x.q, 0) * m.n * 24;
       expect(inf).toBeCloseTo(r.items.find((i) => i.key === 'infiltracao')!.kWhDay, 6);
+    }
+  });
+  it('seleção de seções renumera, cliente e classificação na capa, marcadores e metadados', () => {
+    const p = DEMOS[0].build();
+    const doc = buildTechnicalReport(p, { orientation: 'auto', revision: 'R2', compress: false, client: 'Cliente Exemplo', sections: ['calculo', 'conclusoes'] });
+    const txt = doc.output() as string;
+    expect(txt).toContain('1. Memorial de c');
+    expect(txt).toContain('2. Conclus');
+    expect(txt).not.toContain('Memorial descritivo');
+    expect(txt).not.toContain('DIAGRAMA SIMPLIFICADO');
+    expect(txt).toContain('Cliente Exemplo');
+    expect(txt).toContain('Estudo preliminar');
+    expect(txt).toContain('/Outlines'); // marcadores de navegação
+    expect(txt).toContain('/Lang (pt-BR)');
+    expect(txt).toContain('/Title (');
+  });
+  it('relatório comercial usa o mesmo kit: A4, capa, aviso e números do motor', () => {
+    for (const o of ['retrato', 'paisagem'] as const) {
+      const p = DEMOS[2].build();
+      const doc = buildCommercialReport(p, null, { orientation: o, compress: false, client: 'ACME' });
+      allA4(doc);
+      const txt = doc.output() as string;
+      expect(txt).toContain(n(evaluate(p).loads.nominal.requiredKW, 0));
+      expect(txt).toContain('ESTUDO PRELIMINAR');
     }
   });
 });

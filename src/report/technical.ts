@@ -19,28 +19,22 @@ import { productById } from '../data/products';
 import { insulationById, DOOR_PROTECTION, DOOR_TYPES, SOLAR } from '../data/materials';
 import { APPLICATIONS } from '../data/scenarios';
 import { SOURCES } from '../data/sources';
-import { EQUIPMENT } from '../data/equipment';
 import { computeLayout, placeDoors, doorWorldX, LINE_INFO, type Layout, type LineKind, type PlacedDoor } from '../scene/layout';
-import { BLUE, NAVY, GREY, INK, LIGHT, LINE, PAL, clean, n, brl, hex, drawLogo, chooseScale, slug, type RGB } from './common';
+import { BLUE, NAVY, GREY, INK, LIGHT, clean, n, brl, hex, chooseScale, slug, type RGB } from './common';
+import { PdfComposer, type Orientation } from './kit';
+import { equipmentSchedule, equipmentTags } from './specs';
 
-export type Orientation = 'auto' | 'retrato' | 'paisagem';
-export interface TechOptions { orientation: Orientation; revision: string; compare?: Project | null; image?: string | null; date?: Date; compress?: boolean }
-type Kind = 'capa' | 'texto' | 'desenho';
+export type { Orientation };
+export type Section = 'descritivo' | 'calculo' | 'desenhos' | 'equipamentos' | 'dimensionamento' | 'energia' | 'conclusoes';
+export const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'descritivo', label: 'Memorial descritivo' }, { id: 'calculo', label: 'Memorial de cálculo' }, { id: 'desenhos', label: 'Desenhos técnicos' },
+  { id: 'equipamentos', label: 'Especificação de equipamentos' }, { id: 'dimensionamento', label: 'Quadro de dimensionamento' }, { id: 'energia', label: 'Análise energética' }, { id: 'conclusoes', label: 'Conclusões técnicas' },
+];
+export interface TechOptions { orientation: Orientation; revision: string; compare?: Project | null; image?: string | null; date?: Date; compress?: boolean; client?: string; sections?: Section[] }
 
 const DISCLAIMER = 'PRÉ-DIMENSIONAMENTO ORIENTATIVO: não é projeto executivo, não foi verificado nem aprovado por profissional habilitado e não substitui ART, memorial assinado ou seleção de catálogo.';
 
-/** Etiquetas de desenho (TAG) por equipamento da cena. São identificadores do documento, não modelos comerciais. */
-export function equipmentTags(l: Layout): Record<string, string> {
-  const tags: Record<string, string> = {};
-  const count: Record<string, number> = {};
-  const pre: Record<string, string> = { compressor: 'C', condensador: 'CD', recipiente: 'RL', separador: 'SL', bomba: 'BA', intercooler: 'RI', trocador: 'TP', evaporador: 'EV', tanque: 'TQ', painel: 'QE', valvulas: 'QV', exaustor: 'EX', sensor: 'DT', camara: 'CF' };
-  for (const e of l.equips) {
-    const p = e.id === 'bomba-glicol' ? 'BG' : pre[e.kind] ?? 'X';
-    count[p] = (count[p] ?? 0) + 1;
-    tags[e.id] = `${p}-${String(count[p]).padStart(2, '0')}`;
-  }
-  return tags;
-}
+export { equipmentTags } from './specs';
 
 export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   const ev = evaluate(p);
@@ -51,135 +45,30 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   const date = (opts.date ?? new Date()).toLocaleDateString('pt-BR');
   const rev = opts.revision || 'R0';
   const code = `E3D-${(p.name.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').slice(0, 8) || 'PROJ').toUpperCase()}`;
-  const orient = (k: Kind): 'portrait' | 'landscape' => (opts.orientation === 'auto' ? (k === 'desenho' ? 'landscape' : 'portrait') : opts.orientation === 'paisagem' ? 'landscape' : 'portrait');
 
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: orient('capa'), compress: opts.compress ?? true });
-  doc.setProperties({ title: `${p.name}: Relatório Técnico de Pré-dimensionamento`, subject: 'Pré-dimensionamento orientativo de refrigeração industrial (R717)', creator: 'ENGEFRIL 3D (protótipo demonstrativo)' });
-  let W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-  const kinds: Kind[] = ['capa'];
-  const sheetTitles: Record<number, { title: string; scale: string }> = {};
-  const toc: { title: string; page: number; level: number }[] = [];
-  let y = 0;
-  const ML = 20, MR = 15;
-  const cw = () => W - ML - MR;
-  const bottom = () => H - 18;
-
-  // ---------------- páginas
-  const textHeader = () => {
-    doc.setFillColor(...NAVY); doc.rect(0, 0, W, 14, 'F');
-    doc.setFillColor(...BLUE); doc.rect(0, 14, W, 0.8, 'F');
-    drawLogo(doc, ML, 3, 8);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255, 255, 255);
-    doc.text('ENGEFRIL 3D', ML + 11, 7.2);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
-    doc.text(clean('Relatório Técnico de Pré-dimensionamento'), ML + 11, 11);
-    doc.text(clean(`${code} · ${rev} · ${date}`), W - MR, 9, { align: 'right' });
-  };
-  const newPage = (k: Kind) => {
-    doc.addPage('a4', orient(k));
-    kinds.push(k);
-    W = doc.internal.pageSize.getWidth(); H = doc.internal.pageSize.getHeight();
-    if (k === 'texto') { textHeader(); y = 24; }
-  };
-  const page = () => doc.getNumberOfPages();
-  const need = (h: number) => { if (y + h > bottom()) newPage('texto'); };
-
-  // ---------------- tipografia
-  const font = (size: number, style: 'normal' | 'bold' | 'italic' = 'normal', color: RGB = INK, face = 'helvetica') => { doc.setFont(face, style); doc.setFontSize(size); doc.setTextColor(...color); };
-  const lh = (size: number) => size * 0.42;
-  const h1 = (title: string) => {
-    newPage('texto'); // cada seção principal inicia em página nova
-    toc.push({ title, page: page(), level: 1 });
-    font(13.5, 'bold', BLUE); doc.text(clean(title), ML, y);
-    doc.setDrawColor(...BLUE); doc.setLineWidth(0.4); doc.line(ML, y + 1.8, W - MR, y + 1.8);
-    y += 8.5;
-  };
-  const h2 = (title: string) => { need(14); toc.push({ title, page: page(), level: 2 }); font(10.5, 'bold', NAVY); doc.text(clean(title), ML, y); y += 5.5; };
-  const para = (t: string, size = 9.2, color: RGB = INK, style: 'normal' | 'italic' | 'bold' = 'normal') => {
-    font(size, style, color);
-    for (const line of doc.splitTextToSize(clean(t), cw())) { need(lh(size) + 0.6); doc.text(line, ML, y); y += lh(size) + 0.6; }
-    y += 1.6;
-  };
-  const bullets = (items: string[], size = 9) => {
-    font(size);
-    for (const it of items) {
-      const lines = doc.splitTextToSize(clean(it), cw() - 5);
-      need(lines.length * (lh(size) + 0.5));
-      doc.setFillColor(...BLUE); doc.circle(ML + 1.2, y - 1.1, 0.6, 'F');
-      font(size);
-      lines.forEach((ln: string) => { doc.text(ln, ML + 4, y); y += lh(size) + 0.5; });
-      y += 0.8;
-    }
-    y += 1;
-  };
-  /** Bloco de fórmulas em fonte monoespaçada, com fundo. */
-  const formula = (lines: string[]) => {
-    font(8.6, 'normal', INK, 'courier');
-    const wrapped = lines.flatMap((x) => doc.splitTextToSize(clean(x), cw() - 6) as string[]);
-    const hgt = wrapped.length * 3.9 + 3.5;
-    need(hgt + 1);
-    doc.setFillColor(...LIGHT); doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.rect(ML, y - 3, cw(), hgt, 'FD');
-    doc.setFillColor(...BLUE); doc.rect(ML, y - 3, 0.9, hgt, 'F');
-    font(8.6, 'normal', INK, 'courier');
-    wrapped.forEach((ln, i) => doc.text(ln, ML + 3.5, y + 0.6 + i * 3.9));
-    y += hgt + 2;
-  };
-  interface Col { h: string; w: number; a?: 'l' | 'r' | 'c' }
-  const table = (cols: Col[], rows: string[][], o: { size?: number; total?: boolean } = {}) => {
-    const size = o.size ?? 8.2;
-    const tw = cw();
-    const sum = cols.reduce((a, c) => a + c.w, 0);
-    const ws = cols.map((c) => (c.w / sum) * tw);
-    const pad = 1.4, lhh = lh(size) + 0.35;
-    const head = () => {
-      font(size, 'bold', [255, 255, 255]);
-      const hl = cols.map((c, i) => doc.splitTextToSize(clean(c.h), ws[i] - 2 * pad) as string[]);
-      const hh = Math.max(...hl.map((x) => x.length)) * lhh + 2.6;
-      need(hh + lhh + 3);
-      doc.setFillColor(...NAVY); doc.rect(ML, y - 3.6, tw, hh, 'F');
-      let x = ML;
-      hl.forEach((ls, i) => { ls.forEach((t, j) => doc.text(t, alignX(x, ws[i], cols[i].a), y + j * lhh, { align: cols[i].a === 'r' ? 'right' : cols[i].a === 'c' ? 'center' : 'left' })); x += ws[i]; });
-      y += hh;
-    };
-    const alignX = (x: number, w: number, a?: string) => (a === 'r' ? x + w - pad : a === 'c' ? x + w / 2 : x + pad);
-    head();
-    rows.forEach((r, ri) => {
-      const isTotal = o.total && ri === rows.length - 1;
-      font(size, isTotal ? 'bold' : 'normal');
-      const ls = r.map((c, i) => doc.splitTextToSize(clean(c ?? ''), ws[i] - 2 * pad) as string[]);
-      const rh = Math.max(...ls.map((x) => x.length)) * lhh + 2.2;
-      if (y + rh > bottom()) { newPage('texto'); head(); font(size, isTotal ? 'bold' : 'normal'); }
-      if (isTotal) { doc.setFillColor(227, 240, 250); doc.rect(ML, y - 3.4, tw, rh, 'F'); }
-      else if (ri % 2 === 0) { doc.setFillColor(...LIGHT); doc.rect(ML, y - 3.4, tw, rh, 'F'); }
-      let x = ML;
-      ls.forEach((cell, i) => { cell.forEach((t, j) => doc.text(t, alignX(x, ws[i], cols[i].a), y + j * lhh, { align: cols[i].a === 'r' ? 'right' : cols[i].a === 'c' ? 'center' : 'left' })); x += ws[i]; });
-      doc.setDrawColor(...LINE); doc.setLineWidth(0.15); doc.line(ML, y - 3.4 + rh, ML + tw, y - 3.4 + rh);
-      y += rh;
-    });
-    y += 3.5;
-  };
-  const kv = (rows: [string, string][]) => table([{ h: 'Item', w: 38 }, { h: 'Valor', w: 62 }], rows);
-  const note = (t: string) => para(t, 7.8, GREY, 'italic');
-  const T = { line: (w: number, c: RGB = INK) => { doc.setLineWidth(w); doc.setDrawColor(...c); }, dash: (on: boolean) => doc.setLineDashPattern(on ? [1.6, 1.0] : [], 0) };
+  const K = new PdfComposer({
+    title: `Relatório Técnico de Pré-dimensionamento: ${p.name}`, shortTitle: 'Relatório Técnico de Pré-dimensionamento',
+    subject: 'Pré-dimensionamento orientativo de refrigeração industrial (R717)', code, revision: rev, date, project: p.name, client: opts.client,
+    classification: 'Estudo preliminar', disclaimer: DISCLAIMER,
+  }, { orientation: opts.orientation, compress: opts.compress });
+  const doc = K.doc;
+  const { newPage, font, para, bullets, formula, kv, note, page, barChart } = K;
+  const table = K.TechnicalTable;
+  let secN = 0, subN = 0;
+  const h1 = (t: string) => { subN = 0; K.SectionTitle(`${++secN}. ${t.replace(/^\d+\.\s*/, '')}`); };
+  const h2 = (t: string) => K.SubTitle(`${secN}.${++subN} ${t.replace(/^\d+\.\d+\s*/, '')}`);
+  const T = { line: K.line, dash: K.dash };
+  const area = K.drawingArea, sheetHead = K.sheetHead, dimH = K.dimH, dimV = K.dimV, scaleBar = K.scaleBar;
   const m2 = (v: number) => n(v, 2);
+  const toc = K.toc;
+  const sec = (s: Section) => !opts.sections || opts.sections.includes(s);
 
   // ================= CAPA =================
-  const cover = () => {
-    doc.setFillColor(...NAVY); doc.rect(0, 0, W, H * 0.36, 'F');
-    doc.setFillColor(...BLUE); doc.rect(0, H * 0.36, W, 1.5, 'F');
-    drawLogo(doc, ML, 18, 22);
-    font(12, 'bold', [255, 255, 255]); doc.text('ENGEFRIL 3D', ML + 27, 27);
-    font(8.5, 'normal', [170, 200, 225]); doc.text(clean('Plataforma de refrigeração industrial · protótipo demonstrativo'), ML + 27, 32);
-    font(22, 'bold', [255, 255, 255]);
-    const title = doc.splitTextToSize(clean('Relatório Técnico de Pré-dimensionamento'), W - 2 * ML);
-    doc.text(title, ML, H * 0.36 - 34);
-    font(12, 'normal', [170, 200, 225]);
-    doc.text(doc.splitTextToSize(clean(p.name), W - 2 * ML), ML, H * 0.36 - 16);
-    y = H * 0.36 + 12;
+  {
     const app = APPLICATIONS.find((a) => a.id === p.application)?.name ?? p.application;
     const g = ev.loads.nominal.geometry;
     const rows: [string, string][] = [
-      ['Documento', `${code} · Relatório Técnico Completo`], ['Revisão / data', `${rev} · ${date}`],
+      ['Documento', `${code} · Relatório Técnico Completo`], ...(opts.client ? [['Cliente', opts.client] as [string, string]] : []), ['Classificação', 'Estudo preliminar (pré-dimensionamento orientativo)'], ['Revisão / data', `${rev} · ${date}`],
       ['Aplicação', app], ['Refrigerante / arquitetura', `R717 (amônia) · ${ARCHITECTURES.find((a) => a.id === l.arch)?.name}`],
       ...(p.application === 'agua-gelada'
         ? [['Processo', `${n(p.process.flow, 1)} m³/h · ${p.process.Tin} -> ${p.process.Tout} °C · ${p.process.hoursPerDay} h/dia`] as [string, string]]
@@ -188,20 +77,8 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
       ['Qualidade dos dados', `${QUALITY_INFO[ev.quality].label}: ${QUALITY_INFO[ev.quality].desc}`],
       ['Responsável técnico', 'Não atribuído. Documento sem ART e sem assinatura.'],
     ];
-    kv(rows);
-    if (opts.image) {
-      try {
-        const pr = doc.getImageProperties(opts.image);
-        const iw = Math.min(cw(), (bottom() - y - 30) * (pr.width / pr.height));
-        const ih = iw * (pr.height / pr.width);
-        if (ih > 30) { doc.addImage(opts.image, 'PNG', ML, y, iw, ih, undefined, 'FAST'); y += ih + 3; font(7, 'italic', GREY); doc.text(clean('Perspectiva ilustrativa do modelo 3D (não é desenho técnico).'), ML, y); y += 5; }
-      } catch { /* imagem opcional */ }
-    }
-    const by = H - 34;
-    doc.setFillColor(253, 246, 232); doc.setDrawColor(194, 124, 0); doc.setLineWidth(0.3); doc.rect(ML, by, W - ML - MR, 16, 'FD');
-    font(8, 'bold', [120, 76, 0]); doc.text(doc.splitTextToSize(clean(DISCLAIMER), W - ML - MR - 6), ML + 3, by + 5);
-  };
-  cover();
+    K.Cover(rows, opts.image);
+  }
 
   // ================= SUMÁRIO (preenchido ao final) =================
   newPage('texto');
@@ -215,6 +92,13 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   const g = ev.loads.nominal.geometry;
   const water = p.application === 'agua-gelada';
   const nEv = Math.max(1, l.evaps.length);
+  const m = ev.loads.nominal.memo;
+  const items = Object.fromEntries(ev.loads.nominal.items.map((i) => [i.key, i]));
+  const c = ev.cycle;
+  const e = ev.energy;
+  const evKW = ev.loads.nominal.requiredKW / (nEv * Math.max(1, p.room.count));
+  const comps = l.equips.filter((e) => e.kind === 'compressor');
+  if (sec('descritivo')) {
   h1('1. Memorial descritivo');
   h2('1.1 Objetivo do documento');
   para(`Este documento reúne o pré-dimensionamento orientativo do cenário "${p.name}", gerado pela plataforma ENGEFRIL 3D a partir dos dados informados pelo usuário. Ele serve à análise preliminar por engenheiros e à apresentação comercial. Os resultados são estimativas de regime permanente na condição de projeto e devem ser confirmados por projeto executivo elaborado por profissional habilitado.`);
@@ -234,6 +118,7 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     `Sistema frigorífico: amônia (R717), ${archName?.name.toLowerCase()}. ${archName?.desc}`,
     `Sala de máquinas com compressores parafuso, reservatório de líquido${l.equips.some((e) => e.kind === 'separador') ? ', separador de líquido' : ''}${l.equips.some((e) => e.kind === 'bomba') ? ', bombas de amônia' : ''}${l.equips.some((e) => e.kind === 'intercooler') ? ', resfriador intermediário' : ''}${l.equips.some((e) => e.kind === 'trocador') ? ', trocador a placas' : ''}, quadro de válvulas, painel elétrico, detecção de NH3 e exaustão de emergência.`,
     'Rejeição de calor por condensador evaporativo instalado em área externa.',
+    ...(p.cadImport ? [`Geometria importada do arquivo CAD ${p.cadImport.fileName} (${p.cadImport.format.toUpperCase()} ${p.cadImport.version}), unidade ${p.cadImport.unit}, rotação ${p.cadImport.rotationDeg}°, em ${new Date(p.cadImport.importedAt).toLocaleDateString('pt-BR')}. Parâmetros importados: ${Object.keys(p.cadImport.provenance).join(', ') || 'nenhum'}.${p.cadImport.warnings.length ? ' Avisos da importação: ' + p.cadImport.warnings.join('; ') : ''}`] : []),
   ]);
   h2('1.4 Condições de operação e de projeto');
   table([{ h: 'Parâmetro', w: 50 }, { h: 'Valor', w: 30, a: 'r' }, { h: 'Origem', w: 20 }], [
@@ -257,10 +142,10 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     ['Auxiliares do condensador', `${sys.condAuxPct} % de Qc`, 'Hipótese editável'], ['Resistência de marco (congelados)', `${sys.frameHeaterWm} W/m`, 'Hipótese editável'],
   ]);
 
+  }
   // ================= 2. MEMORIAL DE CÁLCULO =================
+  if (sec('calculo')) {
   h1('2. Memorial de cálculo');
-  const m = ev.loads.nominal.memo;
-  const items = Object.fromEntries(ev.loads.nominal.items.map((i) => [i.key, i]));
   if (water) {
     h2('2.1 Carga do processo');
     const pr = p.process;
@@ -341,7 +226,6 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     `Faixa: ${n(ev.loads.baixo.requiredKW, 1)} a ${n(ev.loads.alto.requiredKW, 1)} kW pelas incertezas da literatura, com margem de +/-${n(QUALITY_INFO[ev.quality].extra * 100)} % pela qualidade dos dados -> ${n(ev.range[0], 0)} a ${n(ev.range[1], 0)} kW`,
   ]);
   h2(`2.${water ? 4 : 8} Ciclo termodinâmico (R717)`);
-  const c = ev.cycle;
   formula([
     water ? `Te = ${p.process.strategy === 'banco-gelo' ? '-10 °C (formação de gelo, hipótese)' : `T_água - 5 K = ${n(ev.temps.Te, 1)} °C`}` : `Te = T_int - TD - 1 K${sys.architecture === 'indireto' ? ' - 6 K (fluido secundário)' : ''} = ${n(ev.temps.Te, 1)} °C  ->  Pe = ${n(satT(ev.temps.Te).P / 100, 3)} bar abs`,
     `Tc = Tbu + aproximação = ${n(ev.temps.twb, 1)} + ${sys.condApproach} = ${n(ev.temps.Tc, 1)} °C (limitada a 25-50 °C)  ->  Pc = ${n(satT(ev.temps.Tc).P / 100, 3)} bar abs`,
@@ -363,46 +247,24 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   bullets(SOURCES.filter((s) => !s.id.startsWith('engefril') || ['engefril-evap', 'engefril-cond', 'engefril-painel', 'engefril-portas', 'engefril-rar', 'engefril-chiller', 'engefril-tanque'].includes(s.id)).map((s) => `${s.title}${s.url ? ` (${s.url})` : ''}`), 8);
   note('As referências ASHRAE, IIAR, ABNT e NR são citadas de conhecimento técnico, sem verificação nesta edição. Confira-as na edição vigente antes de usar em projeto.');
 
+  }
   // ================= 3. DESENHOS TÉCNICOS =================
+  if (sec('desenhos')) {
   drawingSheets();
 
+  }
   // ================= 4. ESPECIFICAÇÃO DE EQUIPAMENTOS =================
+  if (sec('equipamentos')) {
   h1('4. Especificação de equipamentos');
   para('Capacidades estimadas pelo simulador. A Engefril não publica capacidades nem modelos: a seleção final exige catálogo do fabricante e orçamento técnico-comercial. As TAGs identificam os itens nos desenhos e não são códigos de produto.', 8.6, GREY);
-  const evKW = ev.loads.nominal.requiredKW / (nEv * Math.max(1, p.room.count));
-  const comps = l.equips.filter((e) => e.kind === 'compressor');
-  const factsOf = (kind: string) => (EQUIPMENT[kind]?.facts ?? []).filter((f) => f.origin === 'oficial').slice(0, 2).map((f) => f.text).join('; ') || '—';
-  const capOf = (id: string, kind: string): string => {
-    if (c.errors.length) return '—';
-    switch (kind) {
-      case 'compressor': {
-        const two = l.arch === 'duplo-estagio';
-        if (two) return id.endsWith('1') ? `Estágio BP: ${n(c.mdot * 3600, 0)} kg/h; ${n(c.Vsuction, 0)} m³/h na sucção` : `Estágio AP: ${n((c.mdotHP ?? 0) * 3600, 0)} kg/h`;
-        return `${n(ev.loads.nominal.requiredKW / comps.length, 1)} kW frig. (divisão 1/${comps.length}, hipótese); ${n(c.Welec / comps.length, 1)} kW elét.`;
-      }
-      case 'condensador': return `${n(c.Qc, 1)} kW rejeitados a Tc ${n(ev.temps.Tc, 1)} °C / Tbu ${n(ev.temps.twb, 1)} °C`;
-      case 'evaporador': return `${n(evKW, 1)} kW a Te ${n(ev.temps.Te, 1)} °C (ar a ${p.room.Tin} °C)`;
-      case 'separador': return `Sucção de ${n(c.Vsuction, 0)} m³/h; volume a definir`;
-      case 'recipiente': return 'Volume a definir (carga total de NH3)';
-      case 'bomba': return id === 'bomba-glicol' ? 'Fluido secundário: vazão a definir' : `${n(c.Wpump, 2)} kW (taxa de recirculação 4; hipótese)${id.endsWith('2') ? '; reserva' : ''}`;
-      case 'trocador': return `${n(ev.loads.nominal.requiredKW, 1)} kW`;
-      case 'intercooler': return `Pressão intermediária de ${n((c.Pi ?? 0) / 100, 2)} bar (${n(c.Ti ?? 0, 1)} °C)`;
-      case 'tanque': return `${n(ev.loads.nominal.totalKWhDay, 0)} kWh/dia; pico de ${n(ev.loads.nominal.processKW ?? 0, 0)} kW`;
-      default: return '—';
-    }
-  };
-  const specRows = l.equips.filter((e) => e.kind !== 'camara' && e.kind !== 'sensor' && e.kind !== 'evaporador').map((e) => [tags[e.id], e.label, (EQUIPMENT[e.kind]?.fn ?? '').split('.')[0], capOf(e.id, e.kind), factsOf(e.kind)]);
-  if (l.evaps.length) {
-    const t0 = tags[l.evaps[0].id], t1 = tags[l.evaps[l.evaps.length - 1].id];
-    specRows.splice(Math.min(specRows.length, 2), 0, [l.evaps.length > 1 ? `${t0} a ${t1}` : t0, `Evaporadores: ${l.evaps.length} por câmara × ${p.room.count} câmara(s)`, (EQUIPMENT.evaporador.fn ?? '').split('.')[0], `${capOf(l.evaps[0].id, 'evaporador')}, cada`, factsOf('evaporador')]);
-  }
-  const sensors = l.equips.filter((e) => e.kind === 'sensor');
-  if (sensors.length) specRows.push([sensors.map((s) => tags[s.id]).join(', '), 'Detectores de NH3', 'Detecção de vazamentos e acionamento de alarmes e exaustão', '—', 'Níveis de alarme por projeto (IIAR 2 / NBR 16069)']);
+  const specRows = equipmentSchedule(p, ev, l).map((r) => [r.tag, r.name, r.fn, r.capacity, r.facts]);
   table([{ h: 'TAG', w: 8 }, { h: 'Equipamento', w: 20 }, { h: 'Função', w: 24 }, { h: 'Capacidade estimada', w: 22 }, { h: 'Características disponíveis (Engefril)', w: 26 }], specRows, { size: 7.4 });
   h2('4.1 Famílias de solução sugeridas');
   suggestEquipment(p, ev).forEach((s) => { para(`${s.category}${s.product ? ` (referência: ${s.product})` : ''}`, 9, NAVY, 'bold'); para(s.why, 8.6); para('Falta para selecionar: ' + s.missing.join('; ') + '.', 8, GREY, 'italic'); });
 
+  }
   // ================= 5. QUADRO DE DIMENSIONAMENTO =================
+  if (sec('dimensionamento')) {
   h1('5. Quadro de dimensionamento');
   if (!water) {
     h2('5.1 Câmaras frigoríficas');
@@ -432,9 +294,10 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     ...(l.equips.some((e) => e.kind === 'bomba') ? [['Bombas de amônia', String(l.equips.filter((e) => e.kind === 'bomba' && e.id !== 'bomba-glicol').length), `${n(c.Wpump, 2)} kW estimados (1 operação + 1 reserva)`, 'Taxa de recirculação 4 (hipótese)']] : []),
   ]);
 
+  }
   // ================= 6. ANÁLISE ENERGÉTICA =================
+  if (sec('energia')) {
   h1('6. Análise energética');
-  const e = ev.energy;
   table([{ h: 'Consumidor', w: 50 }, { h: 'Potência [kW]', w: 25, a: 'r' }, { h: 'Participação [%]', w: 25, a: 'r' }], [
     ['Compressores (elétrica)', n(e.compKW, 2), n((e.compKW / e.totalElecKW) * 100, 1)],
     ['Auxiliares do condensador (ventiladores e bomba)', n(e.auxKW, 2), n((e.auxKW / e.totalElecKW) * 100, 1)],
@@ -469,7 +332,9 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     para(`Payback simples: ${cmp.payback ? `${n(cmp.payback, 1)} anos` : 'não calculado'}. ${cmp.note}${p.finance.investmentSource ? ` Origem dos valores: ${p.finance.investmentSource}.` : ''}`, 8.6);
   }
 
+  }
   // ================= 7. CONCLUSÕES =================
+  if (sec('conclusoes')) {
   h1('7. Conclusões técnicas');
   h2('7.1 Resultados');
   bullets([
@@ -488,26 +353,10 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   ], 8.6);
   h2('7.4 Informações necessárias para o projeto executivo');
   bullets(ev.missing, 8.6);
-  need(24);
-  doc.setFillColor(253, 246, 232); doc.setDrawColor(194, 124, 0); doc.setLineWidth(0.3);
-  const dl = doc.splitTextToSize(clean(DISCLAIMER + ' Requisitos legais aplicáveis incluem a NR-13 (vasos de pressão), entre outros.'), cw() - 6);
-  doc.rect(ML, y - 3, cw(), dl.length * 3.8 + 4, 'FD'); font(8, 'bold', [120, 76, 0]); doc.text(dl, ML + 3, y + 1); y += dl.length * 3.8 + 6;
+  K.Disclaimer(DISCLAIMER + ' Requisitos legais aplicáveis incluem a NR-13 (vasos de pressão), entre outros.');
 
-  // ---------------- gráfico de barras vetorial
-  function barChart(title: string, rows: { label: string; v: number; txt: string }[]) {
-    h2(title);
-    const max = Math.max(...rows.map((r) => r.v), 1e-9);
-    const lw = 52, bw = cw() - lw - 46;
-    rows.forEach((r, i) => {
-      need(6);
-      font(8.2); doc.text(clean(r.label), ML, y);
-      doc.setFillColor(238, 241, 244); doc.rect(ML + lw, y - 3, bw, 3.6, 'F');
-      doc.setFillColor(...PAL[i % PAL.length]); doc.rect(ML + lw, y - 3, Math.max(0.3, (bw * r.v) / max), 3.6, 'F');
-      font(7.8, 'normal', GREY); doc.text(clean(r.txt), W - MR, y, { align: 'right' });
-      y += 5.6;
-    });
-    y += 2;
   }
+  // ---------------- gráfico de barras vetorial
 
   // ================= desenhos =================
   function drawingSheets() {
@@ -519,66 +368,12 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     let first = true;
     for (const s of sheets) {
       newPage('desenho');
-      if (first) { toc.push({ title: '3. Desenhos técnicos', page: page(), level: 1 }); first = false; }
+      if (first) { toc.push({ title: `${++secN}. Desenhos técnicos`, page: page(), level: 1 }); first = false; }
       s();
     }
   }
-  function frame() {
-    const fx = 25, fy = 7, fw = W - 32, fh = H - 14;
-    doc.setDrawColor(...NAVY); doc.setLineWidth(0.5); doc.rect(fx, fy, fw, fh);
-    return { fx, fy, fw, fh };
-  }
   /** Área útil do desenho (acima da legenda). */
-  function area() { const { fx, fy, fw, fh } = frame(); return { x: fx + 6, y: fy + 12, w: fw - 12, h: fh - 12 - 34 }; }
-  function sheetHead(title: string, scale: string) {
-    toc.push({ title: '   ' + title, page: page(), level: 2 });
-    sheetTitles[page()] = { title, scale };
-    font(11, 'bold', NAVY); doc.text(clean(title), 31, 15);
-  }
-  function arrow(x: number, y0: number, dx: number, dy: number, s = 1.6) {
-    const L0 = Math.hypot(dx, dy) || 1, ux = dx / L0, uy = dy / L0;
-    doc.setFillColor(...INK);
-    doc.triangle(x, y0, x - ux * s - uy * s * 0.35, y0 - uy * s + ux * s * 0.35, x - ux * s + uy * s * 0.35, y0 - uy * s - ux * s * 0.35, 'F');
-  }
   /** Cota horizontal entre x1 e x2 (papel), linha de cota em yd, linhas de chamada a partir de ye. */
-  function dimH(x1: number, x2: number, ye: number, yd: number, txt: string) {
-    if (Math.abs(x2 - x1) < 0.8) return;
-    T.line(0.13, GREY); T.dash(false);
-    doc.line(x1, ye, x1, yd + Math.sign(yd - ye) * 1.2); doc.line(x2, ye, x2, yd + Math.sign(yd - ye) * 1.2);
-    doc.line(x1, yd, x2, yd);
-    arrow(x1, yd, x1 - x2, 0, 1.4); arrow(x2, yd, x2 - x1, 0, 1.4);
-    font(6.4, 'normal', INK);
-    const tw = doc.getTextWidth(txt);
-    if (tw + 1 < Math.abs(x2 - x1)) doc.text(txt, (x1 + x2) / 2, yd - 0.8, { align: 'center' });
-    else {
-      // texto não cabe entre as setas: segundo nível, acima da linha, com pequena chamada
-      const up = Math.sign(yd - ye) < 0 ? -1 : 1;
-      const ty = yd + (up < 0 ? -3.6 : 4.2);
-      doc.line((x1 + x2) / 2, yd, (x1 + x2) / 2, ty + (up < 0 ? 0.8 : -2.6));
-      doc.setFillColor(255, 255, 255); doc.rect((x1 + x2) / 2 - tw / 2 - 0.4, ty - 2.3, tw + 0.8, 2.8, 'F');
-      doc.text(txt, (x1 + x2) / 2, ty, { align: 'center' });
-    }
-  }
-  function dimV(y1: number, y2: number, xe: number, xd: number, txt: string) {
-    if (Math.abs(y2 - y1) < 0.8) return;
-    T.line(0.13, GREY); T.dash(false);
-    doc.line(xe, y1, xd + Math.sign(xd - xe) * 1.2, y1); doc.line(xe, y2, xd + Math.sign(xd - xe) * 1.2, y2);
-    doc.line(xd, y1, xd, y2);
-    arrow(xd, y1, 0, y1 - y2, 1.4); arrow(xd, y2, 0, y2 - y1, 1.4);
-    font(6.4, 'normal', INK);
-    const tw = doc.getTextWidth(txt);
-    if (tw + 1 < Math.abs(y2 - y1)) doc.text(txt, xd - 0.8, (y1 + y2) / 2, { angle: 90, align: 'center' });
-    else doc.text(txt, xd + Math.sign(xd - xe) * 1.2, (y1 + y2) / 2 + 1, { align: Math.sign(xd - xe) > 0 ? 'left' : 'right' });
-  }
-  function scaleBar(x: number, y0: number, k: number, scale: number) {
-    const steps = [1, 2, 5, 10, 20, 50];
-    const unit = steps.find((s) => s * k >= 8) ?? 50;
-    T.line(0.2); T.dash(false);
-    for (let i = 0; i < 4; i++) { doc.setFillColor(...(i % 2 ? [255, 255, 255] as RGB : INK)); doc.rect(x + i * unit * k, y0, unit * k, 1.4, 'FD'); }
-    font(6, 'normal', INK);
-    for (let i = 0; i <= 4; i++) doc.text(`${i * unit}`, x + i * unit * k, y0 + 4, { align: 'center' });
-    doc.text(`m   ESC. 1:${scale}`, x + 4 * unit * k + 3, y0 + 1.6);
-  }
   function rectW(x0: number, z0: number, x1: number, z1: number, tf: (x: number, z: number) => [number, number], style: 'S' | 'F' | 'FD' = 'S') {
     const [a, b] = tf(Math.min(x0, x1), Math.min(z0, z1)), [c2, d] = tf(Math.max(x0, x1), Math.max(z0, z1));
     doc.rect(Math.min(a, c2), Math.min(b, d), Math.abs(c2 - a), Math.abs(d - b), style);
@@ -705,7 +500,7 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   // ---------- Folha de detalhe: sala de máquinas
   function sheetMachineRoom() {
     const A = area();
-    const land = W > H;
+    const land = K.W > K.H;
     const x0 = -23.6, x1 = -1.2, z0 = -7.8, z1 = 7.8;
     const keyW = land ? 74 : 0, keyH = land ? 0 : 52;
     const scale = chooseScale([x1 - x0, z1 - z0], [A.w - keyW - 24, A.h - keyH - 26]);
@@ -779,7 +574,7 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   function sheetSections() {
     const A = area();
     const tw = p.envelope.wallThk / 1000, tr = p.envelope.roofThk / 1000, tfl = p.envelope.floorInsulated ? p.envelope.floorThk / 1000 : 0;
-    const land = W > H;
+    const land = K.W > K.H;
     sheetHead('CORTES A-A e B-B e VISTA FRONTAL', 'indicadas');
     type R = { x: number; y: number; w: number; h: number };
     const regions: R[] = land
@@ -873,7 +668,7 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
   function sheetDiagram() {
     const A = area();
     sheetHead('DIAGRAMA SIMPLIFICADO DO CIRCUITO FRIGORÍFICO (sem escala)', 'sem escala');
-    const land = W > H;
+    const land = K.W > K.H;
     const dw = land ? A.w * 0.64 : A.w, dh = land ? A.h - 18 : A.h * 0.55;
     const s = Math.min(dw / 250, dh / 135);
     const ox = A.x + 2, oy = A.y + 2;
@@ -974,54 +769,7 @@ export function buildTechnicalReport(p: Project, opts: TechOptions): jsPDF {
     font(6, 'italic', GREY); doc.text(clean('Diagrama funcional simplificado: válvulas de serviço, segurança, controle, óleo e degelo omitidas. As cores identificam o estado do fluido e não a cor real.'), A.x, A.y + A.h + 1, { maxWidth: A.w });
   }
 
-  // ---------------- legendas (carimbos), rodapés e sumário
-  const total = doc.getNumberOfPages();
-  const drawingPages = kinds.map((k, i) => (k === 'desenho' ? i + 1 : 0)).filter(Boolean);
-  for (let i = 1; i <= total; i++) {
-    doc.setPage(i);
-    W = doc.internal.pageSize.getWidth(); H = doc.internal.pageSize.getHeight();
-    const k = kinds[i - 1];
-    if (k === 'desenho') {
-      const sh = sheetTitles[i] ?? { title: '', scale: '' };
-      const bw = Math.min(178, W - 32), bh = 30, bx = W - 7 - bw, by = H - 7 - bh;
-      doc.setFillColor(255, 255, 255); T.line(0.4, NAVY); T.dash(false); doc.rect(bx, by, bw, bh, 'FD');
-      doc.line(bx, by + 9, bx + bw, by + 9); doc.line(bx + 30, by, bx + 30, by + 9); doc.line(bx, by + 18, bx + bw, by + 18);
-      const cx = [bx, bx + bw * 0.36, bx + bw * 0.56, bx + bw * 0.76];
-      cx.slice(1).forEach((x) => doc.line(x, by + 18, x, by + bh));
-      drawLogo(doc, bx + 2, by + 1.4, 6);
-      font(6.2, 'bold', NAVY); doc.text('ENGEFRIL 3D', bx + 9.5, by + 4.2); font(4.8, 'normal', GREY); doc.text(clean('protótipo demonstrativo'), bx + 9.5, by + 7.2);
-      font(5, 'normal', GREY); doc.text('PROJETO', bx + 32, by + 3); font(7, 'bold', INK); doc.text(clean(p.name), bx + 32, by + 7.2, { maxWidth: bw - 34 });
-      font(5, 'normal', GREY); doc.text(clean('FOLHA / CONTEÚDO'), bx + 2, by + 12); font(7.2, 'bold', NAVY); doc.text(clean(sh.title), bx + 2, by + 16.2, { maxWidth: bw - 4 });
-      const cells: [string, string][] = [['ESCALA', sh.scale], ['DATA', date], ['REVISÃO', rev], ['FOLHA', `${drawingPages.indexOf(i) + 1}/${drawingPages.length} · pág. ${i}/${total}`]];
-      cells.forEach(([a, b], j) => { font(5, 'normal', GREY); doc.text(clean(a), cx[j] + 1.5, by + 21.5); font(6.8, 'bold', INK); doc.text(clean(b), cx[j] + 1.5, by + 26); });
-      font(4.6, 'bold', [160, 60, 40]);
-      doc.text(clean('PRÉ-DIMENSIONAMENTO ORIENTATIVO: NÃO É PROJETO EXECUTIVO. SEM RESPONSÁVEL TÉCNICO / ART.'), bx + bw, by - 1.5, { align: 'right' });
-    } else if (k === 'texto') {
-      T.line(0.2, LINE); doc.line(ML, H - 13, W - MR, H - 13);
-      font(6.8, 'normal', GREY);
-      doc.text(doc.splitTextToSize(clean('Pré-dimensionamento orientativo gerado por protótipo demonstrativo inspirado na Engefril, sem vínculo oficial. Não é projeto executivo.'), W - ML - MR - 30), ML, H - 9.5);
-      doc.text(`${i} / ${total}`, W - MR, H - 9.5, { align: 'right' });
-    } else {
-      font(6.8, 'normal', GREY); doc.text(`${i} / ${total}`, W - MR, H - 6, { align: 'right' });
-    }
-  }
-  // sumário
-  doc.setPage(tocPage);
-  W = doc.internal.pageSize.getWidth(); H = doc.internal.pageSize.getHeight();
-  let ty = 26;
-  font(14, 'bold', BLUE); doc.text(clean('Sumário'), ML, ty); T.line(0.4, BLUE); doc.line(ML, ty + 1.8, W - MR, ty + 1.8); ty += 10;
-  for (const t of toc) {
-    if (ty > H - 22) break;
-    font(t.level === 1 ? 10 : 8.8, t.level === 1 ? 'bold' : 'normal', t.level === 1 ? NAVY : INK);
-    const label = clean(t.title.trim());
-    const x0 = ML + (t.level === 1 ? 0 : 6);
-    doc.text(label, x0, ty);
-    const lw2 = doc.getTextWidth(label);
-    T.line(0.1, LINE); doc.setLineDashPattern([0.4, 0.8], 0); doc.line(x0 + lw2 + 2, ty - 0.6, W - MR - 10, ty - 0.6); doc.setLineDashPattern([], 0);
-    doc.text(String(t.page), W - MR, ty, { align: 'right' });
-    ty += t.level === 1 ? 6.4 : 5;
-  }
-  return doc;
+  return K.finalize(tocPage);
 }
 
 export const technicalFileName = (p: Project) => `${slug(p.name)}_relatorio_tecnico.pdf`;

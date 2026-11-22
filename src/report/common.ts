@@ -1,14 +1,15 @@
 /** Utilitários compartilhados pelos relatórios PDF (comercial e técnico). */
 import type { jsPDF } from 'jspdf';
+import { rgb } from '../design/tokens';
 
 export type RGB = [number, number, number];
-export const BLUE: RGB = [0, 105, 174]; // #0069AE: medido no favicon oficial
-export const GREY_BRAND: RGB = [156, 154, 160]; // #9C9AA0: medido no favicon oficial
-export const NAVY: RGB = [11, 26, 43];
-export const GREY: RGB = [93, 107, 121];
-export const INK: RGB = [29, 39, 51];
-export const LIGHT: RGB = [244, 246, 248];
-export const LINE: RGB = [205, 213, 221];
+export const BLUE: RGB = rgb('brand-primary');
+export const GREY_BRAND: RGB = rgb('brand-grey');
+export const NAVY: RGB = rgb('ui-dark');
+export const GREY: RGB = rgb('ui-muted');
+export const INK: RGB = rgb('ui-graphite');
+export const LIGHT: RGB = rgb('ui-light');
+export const LINE: RGB = rgb('ui-line');
 export const PAL: RGB[] = [[0, 105, 174], [228, 87, 46], [240, 162, 2], [31, 157, 85], [107, 91, 210], [70, 179, 230], [156, 154, 160], [194, 124, 0], [72, 72, 72]];
 
 /** A fonte padrão do PDF (Helvetica, WinAnsi) não cobre letras gregas nem subscritos: substitui por equivalentes. */

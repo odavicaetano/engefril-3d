@@ -10,6 +10,7 @@ import type { Project } from '../engine/types';
 import { I } from './Icons';
 import { OriginChip } from './common';
 import ExportDialog from './ExportDialog';
+import ImportCadDialog from './ImportCadDialog';
 
 function Shell({ title, children, wide }: { title: string; children: ReactNode; wide?: boolean }) {
   const close = useStore((s) => s.setModal);
@@ -33,6 +34,7 @@ export default function Modals() {
   if (m === 'seguranca') return <Shell title="Segurança em sistemas com amônia"><Safety /></Shell>;
   if (m === 'projetos') return <Shell title="Projetos, importação e exportação"><Projects /></Shell>;
   if (m === 'exportar') return <ExportDialog />;
+  if (m === 'importarCad') return <ImportCadDialog />;
   if (m === 'biblioteca') return <Shell title="Biblioteca de equipamentos e tecnologias" wide><Library /></Shell>;
   return null;
 }
@@ -155,6 +157,7 @@ function Projects() {
       <div className="btns">
         <button className="btn" onClick={exportJson}><I.download /> Exportar cenário atual</button>
         <button className="btn" onClick={() => file.current?.click()}><I.upload /> Importar cenário</button>
+        <button className="btn primary" onClick={() => s.setModal('importarCad')}><I.importCad /> Importar desenho CAD (DWG, BAK, DXF)</button>
         <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importJson(e.target.files[0])} />
       </div>
     </div>

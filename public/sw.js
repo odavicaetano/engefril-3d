@@ -1,6 +1,6 @@
 // Service Worker: cache "stale-while-revalidate" para todos os recursos do próprio domínio.
 // Após a primeira visita, módulos educativos, cena 3D e cálculos locais funcionam offline.
-const CACHE = 'engefril3d-v3';
+const CACHE = 'engefril3d-v4';
 const CORE = ['./', './index.html', './manifest.webmanifest', './favicon.svg', './favicon.ico', './icon-192.png'];
 
 self.addEventListener('install', (e) => {

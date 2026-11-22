@@ -1,0 +1,442 @@
+  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1015
+  9
+$INSUNITS
+ 70
+4
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+LAYER
+  5
+10C
+100
+AcDbSymbolTable
+ 70
+7
+  0
+LAYER
+  5
+10D
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+0
+ 70
+0
+ 62
+7
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+10E
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+PAREDE-INT
+ 70
+0
+ 62
+1
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+10F
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+PAREDE-EXT
+ 70
+0
+ 62
+1
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+110
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+PORTA
+ 70
+0
+ 62
+3
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+111
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+TUBULACAO
+ 70
+0
+ 62
+5
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+112
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+TEXTO
+ 70
+0
+ 62
+7
+  6
+CONTINUOUS
+  0
+LAYER
+  5
+113
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+EQUIPAMENTOS
+ 70
+0
+ 62
+4
+  6
+CONTINUOUS
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+109
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+EVAPORADOR
+ 70
+0
+ 10
+0
+ 20
+0
+ 30
+0
+  3
+EVAPORADOR
+  1
+
+  0
+LWPOLYLINE
+  5
+10A
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+-1200
+ 20
+-500
+ 10
+1200
+ 20
+-500
+ 10
+1200
+ 20
+500
+ 10
+-1200
+ 20
+500
+  0
+ENDBLK
+  5
+10B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+LWPOLYLINE
+  5
+100
+100
+AcDbEntity
+  8
+PAREDE-INT
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0
+ 20
+0
+ 10
+20000
+ 20
+0
+ 10
+20000
+ 20
+12000
+ 10
+0
+ 20
+12000
+  0
+LWPOLYLINE
+  5
+101
+100
+AcDbEntity
+  8
+PAREDE-EXT
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+-100
+ 20
+-100
+ 10
+20100
+ 20
+-100
+ 10
+20100
+ 20
+12100
+ 10
+-100
+ 20
+12100
+  0
+LINE
+  5
+102
+100
+AcDbEntity
+  8
+PORTA
+100
+AcDbLine
+ 10
+5000
+ 20
+-100
+ 30
+0
+ 11
+6500
+ 21
+-100
+ 31
+0
+  0
+LINE
+  5
+103
+100
+AcDbEntity
+  8
+PORTA
+100
+AcDbLine
+ 10
+5000
+ 20
+0
+ 30
+0
+ 11
+6500
+ 21
+0
+ 31
+0
+  0
+ARC
+  5
+104
+100
+AcDbEntity
+  8
+PORTA
+100
+AcDbCircle
+ 10
+20000
+ 20
+3000
+ 30
+0
+ 40
+1200
+100
+AcDbArc
+ 50
+90
+ 51
+180
+  0
+LINE
+  5
+105
+100
+AcDbEntity
+  8
+TUBULACAO
+100
+AcDbLine
+ 10
+-3000
+ 20
+6000
+ 30
+0
+ 11
+2000
+ 21
+6000
+ 31
+0
+  0
+LINE
+  5
+106
+100
+AcDbEntity
+  8
+TUBULACAO
+100
+AcDbLine
+ 10
+-3000
+ 20
+6000
+ 30
+0
+ 11
+2000
+ 21
+6000
+ 31
+0
+  0
+TEXT
+  5
+107
+100
+AcDbEntity
+  8
+TEXTO
+100
+AcDbText
+ 10
+8000
+ 20
+6000
+ 30
+0
+ 40
+300
+  1
+CAMARA 01 - +2 C
+100
+AcDbText
+  0
+INSERT
+  5
+108
+100
+AcDbEntity
+  8
+EQUIPAMENTOS
+100
+AcDbBlockReference
+  2
+EVAPORADOR
+ 10
+10000
+ 20
+11200
+ 30
+0
+ 41
+1
+ 42
+1
+ 43
+1
+ 50
+0
+  0
+ENDSEC
+  0
+EOF
