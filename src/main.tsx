@@ -10,7 +10,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
     navigator.serviceWorker.ready.then(async (reg) => {
       // pré-carrega módulos sob demanda (relatório, visão molecular) para uso offline
-      await Promise.allSettled([import('./report/pdf'), import('./modes/learning/Molecular')]);
+      await Promise.allSettled([import('./report/pdf'), import('./report/technical'), import('./modes/learning/Molecular')]);
       const urls = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => u.startsWith(location.origin));
       reg.active?.postMessage({ type: 'cache', urls: [...new Set([location.href.split('#')[0], ...urls])] });
     });

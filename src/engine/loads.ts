@@ -39,7 +39,8 @@ export function doorInfiltration(d: Door, Tin: number, RHin: number, Df: number,
   const r = air(Tin, RHin);
   const i = air(d.adjacentT, d.adjacentRH);
   const A = d.width * d.height;
-  if (r.rho <= i.rho || i.h <= r.h) return { q: 0, qFull: 0, Dt: 0, mDry: 0, moisture: 0 };
+  const base = { A, H: d.height, rhoR: r.rho, rhoI: i.rho, hR: r.h, hI: i.h };
+  if (r.rho <= i.rho || i.h <= r.h) return { ...base, Fm: 0, E: 0, q: 0, qFull: 0, Dt: 0, mDry: 0, moisture: 0 };
   const Fm = Math.pow(2 / (1 + Math.pow(r.rho / i.rho, 1 / 3)), 1.5);
   const qFull = 0.221 * A * (i.h - r.h) * r.rho * Math.sqrt(1 - i.rho / r.rho) * Math.sqrt(g * d.height) * Fm; // kW com porta aberta
   const passages = d.passagesPerHour * d.hoursPerDay; // por dia
@@ -50,7 +51,7 @@ export function doorInfiltration(d: Door, Tin: number, RHin: number, Df: number,
   const q = qFull * Dt * Df * (1 - E) * seal * d.count;
   const mDry = q / (i.h - r.h); // kg ar seco/s médio
   const moisture = Math.max(0, mDry * (i.W - r.W)) * 86400; // kg água/dia que entra
-  return { q, qFull, Dt, mDry, moisture };
+  return { ...base, Fm, E, q, qFull, Dt, mDry, moisture };
 }
 
 export interface LoadDetail { key: LoadKey; kWhDay: number; avgKW: number; note: string }
@@ -67,6 +68,18 @@ export interface LoadResult {
   U: { wall: number; roof: number; floor: number };
   doorDetails: { id: string; kW: number; Dt: number; qFull: number }[];
   processKW?: number;
+  /** Valores intermediários para o memorial de cálculo (mesmos números usados no resultado). */
+  memo?: LoadMemo;
+}
+
+export interface LoadMemo {
+  lambda: number; bridge: number; n: number;
+  surfaces: { name: string; A: number; U: number; dT: number; W: number }[];
+  Df: number;
+  doors: { id: string; A: number; H: number; rhoR: number; rhoI: number; hR: number; hI: number; Fm: number; qFull: number; Dt: number; E: number; q: number }[];
+  product: { name: string; m: number; T1: number; T2: number; tf: number | null; cp1: number; cp2: number; L: number; eKJ: number; respKW: number };
+  qPerson: number; frost: number; etaD: number; eDefKWh: number; heaterKWh: number;
+  fan: { Vdot: number; dp: number; eta: number; kW: number; hours: number; airDT: number };
 }
 
 export function computeLoads(p: Project, variant: Variant = 'nominal'): LoadResult {
@@ -109,12 +122,14 @@ export function computeLoads(p: Project, variant: Variant = 'nominal'): LoadResu
   const Df = 0.7 + 0.4 * vf; // fator de fluxo da porta: 0,7–1,1 (ASHRAE); nominal 0,9
   let qInf = 0, moisture = 0;
   const doorDetails: LoadResult['doorDetails'] = [];
+  const memoDoors: LoadMemo['doors'] = [];
   for (const d of p.doors) {
     const pr = DOOR_PROTECTION[d.protection];
     const E = pr.range[1] - (pr.range[1] - pr.range[0]) * vf;
     const r = doorInfiltration(d, Tin, p.room.RHin, Df, E);
     qInf += r.q; moisture += r.moisture;
     doorDetails.push({ id: d.id, kW: r.q * n, Dt: r.Dt, qFull: r.qFull });
+    memoDoors.push({ id: d.id, A: r.A, H: r.H, rhoR: r.rhoR, rhoI: r.rhoI, hR: r.hR, hI: r.hI, Fm: r.Fm, qFull: r.qFull, Dt: r.Dt, E: r.E, q: r.q });
   }
   add('infiltracao', qInf * 24, `Gosney & Olama com fator de fluxo Df=${Df.toFixed(2)} e efetividade dos dispositivos de proteção conforme a faixa da literatura.`);
 
@@ -177,5 +192,18 @@ export function computeLoads(p: Project, variant: Variant = 'nominal'): LoadResu
   const continuous = (total - prodDay) / Math.max(8, s.runHours);
   const capacityPeakBasis = continuous + (p.product.coolingHours < s.runHours ? productRateKW : prodDay / Math.max(8, s.runHours));
   const requiredKW = Math.max(capacityAvgBasis, capacityPeakBasis) * (1 + s.safetyFactor);
-  return { geometry: geo, items, totalKWhDay: total, avgKW: total / 24, productRateKW, capacityAvgBasis, capacityPeakBasis, requiredKW, frostKgDay: frost * n, U: { wall: Uw, roof: Ur, floor: Uf }, doorDetails };
+  const memo: LoadMemo = {
+    lambda, bridge, n,
+    surfaces: [
+      { name: 'Paredes (área líquida)', A: geo.wallNet, U: Uw, dT: dW, W: Uw * geo.wallNet * dW },
+      { name: 'Portas (folhas)', A: geo.doorArea, U: Uw * 1.3, dT: dW, W: Uw * 1.3 * geo.doorArea * dW },
+      { name: 'Teto', A: geo.roof, U: Ur, dT: dR, W: Ur * geo.roof * dR },
+      { name: 'Piso', A: geo.floor, U: Uf, dT: Math.max(0, dF), W: Uf * geo.floor * Math.max(0, dF) },
+    ],
+    Df, doors: memoDoors,
+    product: { name: prod.name, m, T1, T2, tf: pp.tFreeze, cp1: pp.cpAbove * cpScale, cp2: pp.cpBelow * cpScale, L: pp.latent, eKJ: eProd, respKW: resp },
+    qPerson, frost, etaD, eDefKWh: eDef, heaterKWh: heater,
+    fan: { Vdot: (fanKW * 1000 * s.fanEta) / dp, dp, eta: s.fanEta, kW: fanKW, hours: fanHours, airDT: s.airDT },
+  };
+  return { geometry: geo, items, totalKWhDay: total, avgKW: total / 24, productRateKW, capacityAvgBasis, capacityPeakBasis, requiredKW, frostKgDay: frost * n, U: { wall: Uw, roof: Ur, floor: Uf }, doorDetails, memo };
 }

@@ -5,7 +5,7 @@ import { DEMOS } from '../data/scenarios';
 
 export type Mode = 'home' | 'comercial' | 'aprendizado' | 'tecnico';
 export type CutMode = 'nenhum' | 'longitudinal' | 'transversal' | 'horizontal' | 'parcial';
-export type Modal = null | 'sobre' | 'fontes' | 'controles' | 'glossario' | 'seguranca' | 'projetos' | 'molecular' | 'biblioteca';
+export type Modal = null | 'sobre' | 'fontes' | 'controles' | 'glossario' | 'seguranca' | 'projetos' | 'molecular' | 'biblioteca' | 'exportar';
 
 export interface ViewState {
   cut: CutMode; cutPos: number; opacity: number; explode: number; technical: boolean; hideBuilding: boolean;

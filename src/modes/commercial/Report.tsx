@@ -1,28 +1,21 @@
-import { useState } from 'react';
 import { useStore } from '../../state/store';
 import { I } from '../../ui/Icons';
 
 export default function Report() {
   const s = useStore();
-  const [busy, setBusy] = useState(false);
-  const gen = async () => {
-    setBusy(true);
-    try {
-      const { buildReport } = await import('../../report/pdf');
-      await buildReport(s.project, s.scenarioB);
-      s.showToast('Relatório PDF gerado.');
-    } catch (e) { s.showToast('Falha ao gerar o PDF: ' + (e as Error).message); }
-    setBusy(false);
-  };
   return (
     <div>
       <div className="card">
-        <h3>Relatório comercial em PDF</h3>
-        <p className="small">Inclui identificação do cenário, dados da instalação, imagem do modelo 3D (vista atual), portas, isolamento, produtos, cargas térmicas, soluções sugeridas, comparação de cenários (se houver), benefícios potenciais, premissas e limitações, fontes técnicas e dados necessários para a engenharia detalhada.</p>
-        <p className="small muted">Dica: ajuste a câmera antes de gerar; a imagem 3D usa a vista atual.</p>
-        <button className="btn primary" disabled={busy} onClick={gen}><I.report /> {busy ? 'Gerando…' : 'Gerar relatório PDF'}</button>
+        <h3>Exportar Projeto em PDF</h3>
+        <p className="small">Gere um documento A4 com pré-visualização antes de baixar. Há dois tipos:</p>
+        <ul className="clean small">
+          <li><b>Relatório Técnico Completo</b>, para análise preliminar por engenheiros: capa técnica, memorial descritivo, memorial de cálculo com fórmulas, desenhos vetoriais cotados (plantas, cortes, vista e diagrama do circuito), especificação de equipamentos, quadro de dimensionamento, análise energética e conclusões.</li>
+          <li><b>Relatório Comercial</b>, para apresentação ao cliente: capacidade, principais cargas, soluções sugeridas, comparação de cenários e premissas.</li>
+        </ul>
+        <p className="small muted">Orientação retrato, paisagem ou automática (texto em retrato e desenhos em paisagem), sempre em A4. A imagem 3D opcional usa a vista atual da câmera.</p>
+        <button className="btn primary" onClick={() => s.setModal('exportar')}><I.report /> Exportar Projeto em PDF</button>
       </div>
-      <div className="card"><p className="small muted" style={{ margin: 0 }}>O relatório é uma estimativa preliminar para apoio à decisão. Não é uma proposta contratual nem um projeto de engenharia.</p></div>
+      <div className="card"><p className="small muted" style={{ margin: 0 }}>Os documentos são pré-dimensionamentos orientativos para apoio à decisão. Não são propostas contratuais nem projetos executivos e não contêm assinatura, ART ou validação profissional.</p></div>
     </div>
   );
 }

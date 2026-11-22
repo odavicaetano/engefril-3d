@@ -3,7 +3,7 @@
  * pela câmera e pelo tour guiado. Coordenadas em metros, com y para cima. A câmara ocupa x∈[0,L],
  * a sala de máquinas x∈[-16,-2] e o condensador evaporativo fica do lado de fora, em x≈-21,5.
  */
-import type { Project } from '../engine/types';
+import type { Door, Project, Wall } from '../engine/types';
 import type { Architecture } from '../engine/cycle';
 import { roomGeometry } from '../engine/loads';
 
@@ -198,4 +198,32 @@ export function cycleTour(l: Layout): TourStop[] {
   stops.push({ target: l.arch === 'dx' ? ev : l.arch === 'duplo-estagio' ? 'intercooler' : 'separador', title: `${stops.length + 1}. Expansão`, text: 'Ao passar pela válvula de expansão (ou de boia), a pressão cai bruscamente. Parte do líquido evapora instantaneamente (flash) e resfria o restante até a temperatura de evaporação.', line: 'liquido-ap', stateIds: ['3', '4'] });
   stops.push({ target: ev, title: `${stops.length + 1}. Retorno ao evaporador`, text: 'O líquido frio volta ao evaporador e o ciclo recomeça. O calor retirado da câmara mais a energia do compressor são rejeitados no condensador: o sistema transporta calor, ele não fabrica frio.', stateIds: ['4', '1'] });
   return stops;
+}
+
+/** Posição das portas ao longo de cada parede (u em metros a partir da origem da parede), compartilhada pela cena 3D e pelos desenhos.
+ *  frente: x=u, z=+W/2 · fundo: x=L-u, z=-W/2 · esquerda: x=0, z=W/2-u · direita: x=L, z=-W/2+u */
+export interface PlacedDoor { door: Door; idx: number; u0: number; u1: number; wall: Wall }
+export function placeDoors(p: Project, L: number, W: number): PlacedDoor[] {
+  const out: PlacedDoor[] = [];
+  for (const d of p.doors) {
+    const len = d.wall === 'frente' || d.wall === 'fundo' ? L : W;
+    const span = d.count * d.width + (d.count - 1) * 1.0;
+    const start = Math.min(Math.max(0.3, d.position * len - span / 2), Math.max(0.3, len - span - 0.3));
+    for (let i = 0; i < d.count; i++) {
+      const u0 = start + i * (d.width + 1);
+      if (u0 + d.width > len - 0.1) break;
+      out.push({ door: d, idx: i, u0, u1: u0 + d.width, wall: d.wall });
+    }
+  }
+  return out;
+}
+
+
+export function doorWorldX(pd: PlacedDoor, L: number, W: number, u: number): { x: number; z: number } {
+  switch (pd.wall) {
+    case 'frente': return { x: u, z: W / 2 };
+    case 'fundo': return { x: L - u, z: -W / 2 };
+    case 'esquerda': return { x: 0, z: W / 2 - u };
+    case 'direita': return { x: L, z: -W / 2 + u };
+  }
 }

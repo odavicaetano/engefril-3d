@@ -1,6 +1,6 @@
 /** Integra cargas, ciclo e energia; classifica a qualidade dos dados e gera conclusões sustentadas pelos números. */
 import { computeLoads, LOAD_LABEL, type LoadKey, type LoadResult } from './loads';
-import { computeCycle, type CycleResult } from './cycle';
+import { ARCHITECTURES, computeCycle, type CycleResult } from './cycle';
 import { wetBulb } from './psychro';
 import type { ConfirmKey, Project } from './types';
 
@@ -125,6 +125,17 @@ export function sensitivity(p: Project): { label: string; low: number; high: num
     const b = structuredClone(p); t.apply(b, 1);
     return { label: t.label, low: computeLoads(a).requiredKW - base, high: computeLoads(b).requiredKW - base };
   }).sort((x, y) => Math.abs(y.high - y.low) - Math.abs(x.high - x.low));
+}
+
+/** Mesmas cargas e condensação, outras arquiteturas: ciclo, COP e potência de cada uma (indireto: evaporação 6 K menor, hipótese). */
+export function compareArchitectures(p: Project, e: Evaluation) {
+  return ARCHITECTURES.map((a) => {
+    let Te = e.temps.Te;
+    if (a.id === 'indireto' && p.system.architecture !== 'indireto') Te -= 6;
+    if (a.id !== 'indireto' && p.system.architecture === 'indireto') Te += 6;
+    const c = computeCycle({ Te, Tc: e.temps.Tc, superheat: p.system.superheat, subcool: p.system.subcool, etaIs: p.system.etaIs, etaMotor: p.system.etaMotor, architecture: a.id, capacity: e.loads.nominal.requiredKW });
+    return { id: a.id, name: a.name, Te, cycle: c };
+  });
 }
 
 export interface Comparison { dKWh: number; dCost: number; dCap: number; payback: number | null; note: string }

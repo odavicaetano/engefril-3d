@@ -8,6 +8,7 @@ import { insulationById, DOOR_PROTECTION, DOOR_TYPES } from '../data/materials';
 import { ARCHITECTURES } from '../engine/cycle';
 import { SOURCES, ORIGIN_LABEL } from '../data/sources';
 import { captureScene } from '../scene/sceneUtils';
+import { drawLogo } from './common';
 
 const BLUE: [number, number, number] = [0, 105, 174];
 const NAVY: [number, number, number] = [11, 26, 43];
@@ -20,30 +21,17 @@ const clean = (s: string) => s
   .replace(/η/g, 'eta').replace(/θ/g, 'theta').replace(/√/g, 'raiz').replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/±/g, '+/-').replace(/∓/g, '-/+').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/·/g, '·');
 const n = (v: number, d = 0) => (Number.isFinite(v) ? v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '-');
 
-async function logoPng(): Promise<string | null> {
-  try {
-    const svg = await (await fetch('./favicon.svg')).text();
-    const img = new Image();
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    await img.decode();
-    const c = document.createElement('canvas'); c.width = c.height = 128;
-    c.getContext('2d')!.drawImage(img, 0, 0, 128, 128);
-    return c.toDataURL('image/png');
-  } catch { return null; }
-}
-
-export async function buildReport(p: Project, b: Project | null, opts: { save?: boolean } = {}): Promise<Blob> {
+export async function buildReport(p: Project, b: Project | null, opts: { save?: boolean; orientation?: 'retrato' | 'paisagem' } = {}): Promise<Blob> {
   const ev = evaluate(p);
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W = 210, M = 16;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: opts.orientation === 'paisagem' ? 'landscape' : 'portrait' });
+  const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight(), M = 16;
   let y = 0;
-  const logo = await logoPng();
   const date = new Date().toLocaleDateString('pt-BR');
 
   const header = () => {
     doc.setFillColor(...NAVY); doc.rect(0, 0, W, 20, 'F');
     doc.setFillColor(...BLUE); doc.rect(0, 20, W, 1.2, 'F');
-    if (logo) doc.addImage(logo, 'PNG', M, 4, 12, 12);
+    drawLogo(doc, M, 4, 12);
     doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('ENGEFRIL 3D', M + 15, 10.5);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.text(clean('Relatório de pré-dimensionamento · protótipo demonstrativo'), M + 15, 15);
     doc.text(date, W - M, 10.5, { align: 'right' });
@@ -54,11 +42,11 @@ export async function buildReport(p: Project, b: Project | null, opts: { save?: 
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i);
       doc.setFontSize(7); doc.setTextColor(...GREY);
-      doc.text(clean('Estimativa preliminar gerada por protótipo demonstrativo inspirado na Engefril, sem vínculo oficial. Não constitui proposta comercial nem projeto de engenharia.'), M, 290);
-      doc.text(`${i}/${pages}`, W - M, 290, { align: 'right' });
+      doc.text(clean('Estimativa preliminar gerada por protótipo demonstrativo inspirado na Engefril, sem vínculo oficial. Não constitui proposta comercial nem projeto de engenharia.'), M, PH - 7);
+      doc.text(`${i}/${pages}`, W - M, PH - 7, { align: 'right' });
     }
   };
-  const need = (h: number) => { if (y + h > 280) { doc.addPage(); header(); } };
+  const need = (h: number) => { if (y + h > PH - 17) { doc.addPage(); header(); } };
   const h2 = (t: string) => { need(14); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...BLUE); doc.text(clean(t), M, y); doc.setDrawColor(...BLUE); doc.setLineWidth(0.3); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; };
   const para = (t: string, size = 9, color: [number, number, number] = [29, 39, 51]) => {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(...color);

@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../state/store';
 import type { Door, Project, Wall } from '../engine/types';
+import { placeDoors, type PlacedDoor } from './layout';
 import { M } from './materials';
 import { G } from './parts';
 import type { Layout } from './layout';
@@ -52,22 +53,6 @@ function wallFrame(wall: Wall, L: number, W: number, t: number) {
     case 'esquerda': return { o: new THREE.Vector3(-t / 2, 0, W / 2), u: new THREE.Vector3(0, 0, -1), len: W, rotY: -Math.PI / 2 };
     case 'direita': return { o: new THREE.Vector3(L + t / 2, 0, -W / 2), u: new THREE.Vector3(0, 0, 1), len: W, rotY: Math.PI / 2 };
   }
-}
-
-export interface PlacedDoor { door: Door; idx: number; u0: number; u1: number; wall: Wall }
-export function placeDoors(p: Project, L: number, W: number): PlacedDoor[] {
-  const out: PlacedDoor[] = [];
-  for (const d of p.doors) {
-    const len = d.wall === 'frente' || d.wall === 'fundo' ? L : W;
-    const span = d.count * d.width + (d.count - 1) * 1.0;
-    const start = Math.min(Math.max(0.3, d.position * len - span / 2), Math.max(0.3, len - span - 0.3));
-    for (let i = 0; i < d.count; i++) {
-      const u0 = start + i * (d.width + 1);
-      if (u0 + d.width > len - 0.1) break;
-      out.push({ door: d, idx: i, u0, u1: u0 + d.width, wall: d.wall });
-    }
-  }
-  return out;
 }
 
 export function ColdRoom({ l, p }: { l: Layout; p: Project }) {

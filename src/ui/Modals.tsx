@@ -9,6 +9,7 @@ import { R717_META } from '../engine/r717';
 import type { Project } from '../engine/types';
 import { I } from './Icons';
 import { OriginChip } from './common';
+import ExportDialog from './ExportDialog';
 
 function Shell({ title, children, wide }: { title: string; children: ReactNode; wide?: boolean }) {
   const close = useStore((s) => s.setModal);
@@ -31,6 +32,7 @@ export default function Modals() {
   if (m === 'glossario') return <Shell title="Glossário técnico"><dl>{Object.values(GLOSSARY).map((g) => <div key={g.term} style={{ marginBottom: 10 }}><dt><b>{g.term}</b></dt><dd style={{ margin: '2px 0 0' }}>{g.def}{g.ex && <i className="muted"> Ex.: {g.ex}</i>}</dd></div>)}</dl></Shell>;
   if (m === 'seguranca') return <Shell title="Segurança em sistemas com amônia"><Safety /></Shell>;
   if (m === 'projetos') return <Shell title="Projetos, importação e exportação"><Projects /></Shell>;
+  if (m === 'exportar') return <ExportDialog />;
   if (m === 'biblioteca') return <Shell title="Biblioteca de equipamentos e tecnologias" wide><Library /></Shell>;
   return null;
 }
