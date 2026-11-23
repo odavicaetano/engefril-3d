@@ -8,7 +8,7 @@
 | Alternativas avaliadas | ODA SDK (licença comercial paga); Autodesk Platform Services (nuvem: exige conta e chave de API e envia o desenho a terceiros); outros leitores no npm são derivados do LibreDWG (GPL-2.0, GPL-3.0 ou AGPL). |
 | Privacidade | O arquivo é lido localmente, num Web Worker. Nada é enviado a servidores. |
 | Segurança | Conteúdo não confiável: apenas leitura, sem execução de macros ou scripts embutidos. Limites de 50 MB, 250 000 entidades, 4 níveis de blocos aninhados e 60 s (o worker é encerrado ao estourar o tempo). |
-| Formatos | `.dwg` de AutoCAD 2000 a 2025 (AC1015 a AC1032). `.bak` somente se a assinatura for de DWG ou DXF. `.dxf` ASCII. Recusados com orientação: DXF binário, DWG R11/R12/R13, `.dwt`, `.dws` e extensões renomeadas sem assinatura válida. |
+| Formatos | `.dwg` de AutoCAD 2000 a 2027 (AC1015 a AC1032). `.bak` somente se a assinatura for de DWG ou DXF. `.dxf` ASCII. Recusados com orientação: DXF binário, DWG R11/R12/R13, `.dwt`, `.dws` e extensões renomeadas sem assinatura válida. |
 
 ## Fluxo (Arquivo → Leitura → Unidades → Mapeamento → Prévia 3D → Confirmar)
 1. **Arquivo:** seleção ou arraste, com ícones e explicações de DWG, BAK e DXF.
@@ -34,3 +34,11 @@
 DWG 2D (2000 e 2018), DWG 3D com blocos (2018), BAK válido, BAK inválido, extensão renomeada, DWT recusado, DWG truncado, DXF em mm com paredes, portas, bloco e linha duplicada, DXF sem unidade, escala errada, DXF 3D, Xref ausente, DXF corrompido, filtro por camada e aplicação não destrutiva com extrusão e uso no PDF.
 
 Os DWG de teste (`test/fixtures/cad/sample_*.dwg`, `example_2018.dwg`) vêm do repositório do GNU LibreDWG (test/test-data, GPL-3.0). Os DXF são gerados por [`scripts/gen-cad-fixtures.mjs`](../scripts/gen-cad-fixtures.mjs).
+
+
+## Robustez da prévia (novembro de 2026)
+- AutoCAD 2026 e 2027 continuam usando DWG 2018 (AC1032), segundo Autodesk. Isso não significa suporte completo a objetos AEC/proxy.
+- A prévia 2D enquadra entidades das camadas selecionadas, em vez de confiar exclusivamente nos extents globais do arquivo.
+- Se todas as camadas estiverem desligadas/congeladas, a seleção inicial inclui camadas com entidades para permitir diagnóstico.
+- Uma leitura sem geometria desenhável exibe aviso, sem substituir o projeto atual.
+- O reconhecimento de equipamentos e objetos proprietários permanece assistido; não afirmar conversão automática universal.
