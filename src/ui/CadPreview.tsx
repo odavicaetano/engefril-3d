@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CadModel, Pt } from '../cad/model';
 import type { Category, DoorCandidate, Hint, RoomCandidate } from '../cad/recognize';
 
@@ -32,8 +32,28 @@ export function CadPlan({ model, layers, mapping, room, doors, hints }: { model:
   }, [model, layers, mapping]);
   const ext = model.extents;
   const pad = Math.max(ext.max[0] - ext.min[0], ext.max[1] - ext.min[1]) * 0.04 || 1;
-  const base = { x: ext.min[0] - pad, y: -ext.max[1] - pad, w: ext.max[0] - ext.min[0] + 2 * pad, h: ext.max[1] - ext.min[1] + 2 * pad };
+  // Enquadre somente as entidades efetivamente visíveis. Extents do DWG podem conter
+  // referências remotas ou entidades ocultas, fazendo uma planta válida parecer vazia.
+  const visible = model.entities.filter((e) => layers.has(e.layer) && mapping[e.layer] !== 'ignorar');
+  const coords: Pt[] = [];
+  for (const e of visible) {
+    const g = e.geo;
+    if (g.kind === 'line') coords.push(g.a, g.b);
+    else if (g.kind === 'poly' || g.kind === 'face3d') coords.push(...g.pts);
+    else if (g.kind === 'arc' || g.kind === 'circle') coords.push([g.c[0]-g.r,g.c[1]-g.r],[g.c[0]+g.r,g.c[1]+g.r]);
+    else if (g.kind === 'insert') coords.push(g.p);
+    else if (g.kind === 'text' || g.kind === 'dim') coords.push(g.p);
+  }
+  const valid = coords.filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  const minX = valid.length ? valid.reduce((v,p)=>Math.min(v,p[0]),Infinity) : ext.min[0];
+  const maxX = valid.length ? valid.reduce((v,p)=>Math.max(v,p[0]),-Infinity) : ext.max[0];
+  const minY = valid.length ? valid.reduce((v,p)=>Math.min(v,p[1]),Infinity) : ext.min[1];
+  const maxY = valid.length ? valid.reduce((v,p)=>Math.max(v,p[1]),-Infinity) : ext.max[1];
+  const span = Math.max(maxX-minX, maxY-minY, 1);
+  const safePad = span * 0.04;
+  const base = { x: minX-safePad, y: -maxY-safePad, w: Math.max(maxX-minX,span*0.01)+2*safePad, h: Math.max(maxY-minY,span*0.01)+2*safePad };
   const [vb, setVb] = useState(base);
+  useEffect(() => setVb(base), [minX, maxX, minY, maxY]);
   const drag = useRef<{ x: number; y: number; vb: typeof base } | null>(null);
   const svg = useRef<SVGSVGElement>(null);
   const stroke = Math.max(base.w, base.h) / 900;
@@ -50,6 +70,7 @@ export function CadPlan({ model, layers, mapping, room, doors, hints }: { model:
         {room && <polygon points={room.rect.corners.map((c) => `${c[0]},${-c[1]}`).join(' ')} fill="rgba(0,105,174,.12)" stroke="#0069AE" strokeWidth={2.5} vectorEffect="non-scaling-stroke" />}
         {hints?.map((h) => <circle key={h.id} cx={h.p[0]} cy={-h.p[1]} r={stroke * 9} fill="none" stroke="#C27C00" strokeWidth={2} vectorEffect="non-scaling-stroke" />)}
       </svg>
+      {!paths.length && <div className="small muted" style={{ padding: 10 }}>Nenhuma geometria visível nas camadas selecionadas. Ative outras camadas ou verifique os objetos não suportados.</div>}
       <div className="cad-plan-tools">
         <button className="btn sm" onClick={() => zoom(1 / 1.4)} aria-label="Aproximar">+</button>
         <button className="btn sm" onClick={() => zoom(1.4)} aria-label="Afastar">−</button>
