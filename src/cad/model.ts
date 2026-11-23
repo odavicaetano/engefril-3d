@@ -20,7 +20,7 @@ export interface CadModel {
   format: CadFormat;
   sourceFormat: 'dwg' | 'dxf'; // conteúdo real (um BAK contém DWG)
   version: string; // AC1032…
-  versionName: string; // "AutoCAD 2018–2025"
+  versionName: string; // "AutoCAD 2018–2027"
   insunits: number; // $INSUNITS
   extents: { min: Pt; max: Pt };
   layers: CadLayer[];
