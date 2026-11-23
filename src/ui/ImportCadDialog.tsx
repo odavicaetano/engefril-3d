@@ -13,7 +13,7 @@ import { Check, Num, fmt } from './common';
 const STEPS = ['Arquivo', 'Leitura', 'Unidades', 'Mapeamento', 'Prévia 3D', 'Confirmar'] as const;
 const STEP_ICON = [I.importCad, I.plan, I.ruler, I.layers, I.cube, I.check];
 const FORMATS = [
-  { ext: 'DWG', title: 'DWG: desenho nativo do AutoCAD (versões 2000 a 2025). Lido localmente pelo GNU LibreDWG.' },
+  { ext: 'DWG', title: 'DWG: desenho nativo do AutoCAD (versões 2000 a 2027). Lido localmente pelo GNU LibreDWG.' },
   { ext: 'BAK', title: 'BAK: cópia de segurança criada pelo AutoCAD. Aceito somente se o conteúdo for um DWG válido.' },
   { ext: 'DXF', title: 'DXF: formato de intercâmbio aberto (ASCII). Recomendado quando o DWG não abrir.' },
 ];
@@ -60,7 +60,7 @@ export default function ImportCadDialog() {
       const map: Record<string, Category> = {};
       m.layers.forEach((l) => (map[l.name] = suggestCategory(l.name, m.entities.filter((e) => e.layer === l.name)).cat));
       setModel(m); setUnit(g.unit); setMapping(map);
-      setLayers(new Set(m.layers.filter((l) => l.count > 0 && !l.off && !l.frozen).map((l) => l.name)));
+      setLayers(new Set((m.layers.some((l) => l.count > 0 && !l.off && !l.frozen) ? m.layers.filter((l) => l.count > 0 && !l.off && !l.frozen) : m.layers.filter((l) => l.count > 0)).map((l) => l.name)));
       setProgress('');
     } catch (e) { setError((e as Error).message); setProgress(''); }
   };
@@ -95,7 +95,7 @@ export default function ImportCadDialog() {
                 onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) pick(f); }}>
                 <div className="ftypes">{FORMATS.map((f) => <FileTypeIcon key={f.ext} ext={f.ext} title={f.title} />)}</div>
                 <b>Arraste o arquivo aqui ou clique para selecionar</b>
-                <span className="small muted">Aceitos: .dwg (AutoCAD 2000 a 2025), .bak (somente se contiver DWG válido) e .dxf ASCII. Limite de {LIMITS.maxBytes / 1048576} MB.</span>
+                <span className="small muted">Aceitos: .dwg (AutoCAD 2000 a 2027), .bak (somente se contiver DWG válido) e .dxf ASCII. Limite de {LIMITS.maxBytes / 1048576} MB.</span>
               </div>
               <input ref={fileInput} type="file" hidden accept=".dwg,.bak,.dxf,.DWG,.BAK,.DXF" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
               <ul className="clean small" style={{ marginTop: 12 }}>
@@ -120,6 +120,7 @@ export default function ImportCadDialog() {
                     <div className="kpi"><span>Unidade</span><b>{guess?.unit}</b><i>{guess?.confident ? 'declarada no arquivo' : 'estimada: confirme na próxima etapa'}</i></div>
                     <div className="kpi"><span>Extensão do desenho</span><b>{fmt((model.extents.max[0] - model.extents.min[0]) * toM, 1)} × {fmt((model.extents.max[1] - model.extents.min[1]) * toM, 1)} m</b><i>na unidade atual</i></div>
                   </div>
+                  {model.entities.length === 0 && <div className="insight warn small">Nenhuma geometria desenhável foi extraída. Confira referências externas, objetos proxy e se o desenho está no Model Space. O projeto atual permanece intacto.</div>}
                   {model.warnings.map((w) => <div key={w} className="insight warn small">{w}</div>)}
                   <details className="small"><summary>Tipos de entidade</summary><p>{Object.entries(model.stats).map(([k, v]) => `${k}: ${v}`).join(' · ')}</p></details>
                 </>
