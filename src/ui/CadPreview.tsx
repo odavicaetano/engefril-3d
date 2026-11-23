@@ -31,7 +31,6 @@ export function CadPlan({ model, layers, mapping, room, doors, hints }: { model:
     return { paths: [...byCat.entries()], truncated };
   }, [model, layers, mapping]);
   const ext = model.extents;
-  const pad = Math.max(ext.max[0] - ext.min[0], ext.max[1] - ext.min[1]) * 0.04 || 1;
   // Enquadre somente as entidades efetivamente visíveis. Extents do DWG podem conter
   // referências remotas ou entidades ocultas, fazendo uma planta válida parecer vazia.
   const visible = model.entities.filter((e) => layers.has(e.layer) && mapping[e.layer] !== 'ignorar');
